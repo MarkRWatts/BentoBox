@@ -6,6 +6,7 @@ struct MealSlotDetailView: View {
     @Query private var entries: [LoggedEntry]
     @Environment(\.modelContext) private var modelContext
     @State private var isPresentingAddFood = false
+    @State private var isPresentingBarcodeScan = false
 
     init(mealSlot: MealSlotConfig) {
         self.mealSlot = mealSlot
@@ -46,8 +47,17 @@ struct MealSlotDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button {
-                    isPresentingAddFood = true
+                Menu {
+                    Button {
+                        isPresentingBarcodeScan = true
+                    } label: {
+                        Label("Scan Barcode", systemImage: "barcode.viewfinder")
+                    }
+                    Button {
+                        isPresentingAddFood = true
+                    } label: {
+                        Label("Enter Manually", systemImage: "square.and.pencil")
+                    }
                 } label: {
                     Label("Add Food", systemImage: "plus")
                 }
@@ -55,6 +65,9 @@ struct MealSlotDetailView: View {
         }
         .sheet(isPresented: $isPresentingAddFood) {
             ManualFoodEntryView(mealSlot: mealSlot)
+        }
+        .sheet(isPresented: $isPresentingBarcodeScan) {
+            BarcodeScanView(mealSlot: mealSlot)
         }
     }
 

@@ -13,6 +13,9 @@ final class FoodLoggingViewModel {
     var carbGrams: Double = 0
     var fatGrams: Double = 0
     var quantity: Double = 1
+    /// Set when this entry originates from a barcode scan that had no Open Food Facts match,
+    /// so the manually-entered nutrition still gets cached against that barcode for next time.
+    var barcode: String?
 
     var isValid: Bool {
         !name.trimmingCharacters(in: .whitespaces).isEmpty && calories >= 0
@@ -22,6 +25,7 @@ final class FoodLoggingViewModel {
         let foodItem = FoodItem(
             name: name.trimmingCharacters(in: .whitespaces),
             brand: brand.isEmpty ? nil : brand,
+            barcode: barcode,
             servingSizeDescription: servingSizeDescription,
             caloriesPerServing: calories,
             proteinGramsPerServing: proteinGrams,

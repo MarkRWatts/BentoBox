@@ -7,6 +7,8 @@ struct ManualFoodEntryView: View {
     @State private var viewModel = FoodLoggingViewModel()
 
     let mealSlot: MealSlotConfig
+    var prefilledBarcode: String?
+    var onSaved: (() -> Void)?
 
     var body: some View {
         NavigationStack {
@@ -32,6 +34,9 @@ struct ManualFoodEntryView: View {
             }
             .navigationTitle("Add to \(mealSlot.name)")
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                viewModel.barcode = prefilledBarcode
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
@@ -39,6 +44,7 @@ struct ManualFoodEntryView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         viewModel.saveEntry(mealSlot: mealSlot, context: modelContext)
+                        onSaved?()
                         dismiss()
                     }
                     .disabled(!viewModel.isValid)
