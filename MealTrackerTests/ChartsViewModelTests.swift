@@ -18,18 +18,6 @@ struct ChartsViewModelTests {
         FoodItem(name: "Test Food", servingSizeDescription: "1 serving", caloriesPerServing: calories, proteinGramsPerServing: 0, carbGramsPerServing: 0, fatGramsPerServing: 0, source: .manual)
     }
 
-    @Test func weightTrendPointsExcludeEntriesOutsideRange() {
-        let profile = makeProfile()
-        let referenceDate = Date()
-        let withinRange = BodyMetricEntry(date: Calendar.current.date(byAdding: .day, value: -5, to: referenceDate)!, weightKG: 70, profile: profile)
-        let outsideRange = BodyMetricEntry(date: Calendar.current.date(byAdding: .day, value: -40, to: referenceDate)!, weightKG: 72, profile: profile)
-
-        let viewModel = ChartsViewModel(profile: profile, weightEntries: [withinRange, outsideRange], loggedEntries: [], rangeDays: 30, referenceDate: referenceDate)
-
-        #expect(viewModel.weightTrendPoints.count == 1)
-        #expect(viewModel.weightTrendPoints.first?.weightKG == 70)
-    }
-
     @Test func calorieTrendPointsGroupEntriesByDay() {
         let profile = makeProfile()
         let referenceDate = Date()
@@ -37,7 +25,7 @@ struct ChartsViewModelTests {
         let entry1 = LoggedEntry(date: referenceDate, quantity: 1, mealSlotNameSnapshot: "Breakfast", foodItem: foodItem)
         let entry2 = LoggedEntry(date: referenceDate.addingTimeInterval(3600), quantity: 1, mealSlotNameSnapshot: "Lunch", foodItem: foodItem)
 
-        let viewModel = ChartsViewModel(profile: profile, weightEntries: [], loggedEntries: [entry1, entry2], rangeDays: 30, referenceDate: referenceDate)
+        let viewModel = ChartsViewModel(profile: profile, loggedEntries: [entry1, entry2], rangeDays: 30, referenceDate: referenceDate)
 
         #expect(viewModel.calorieTrendPoints.count == 1)
         #expect(viewModel.calorieTrendPoints.first?.calories == 400)
@@ -52,7 +40,7 @@ struct ChartsViewModelTests {
             LoggedEntry(date: calendar.date(byAdding: .day, value: -offset, to: referenceDate)!, quantity: 1, mealSlotNameSnapshot: "Snack", foodItem: foodItem)
         }
 
-        let viewModel = ChartsViewModel(profile: profile, weightEntries: [], loggedEntries: entries, rangeDays: 30, referenceDate: referenceDate)
+        let viewModel = ChartsViewModel(profile: profile, loggedEntries: entries, rangeDays: 30, referenceDate: referenceDate)
 
         #expect(viewModel.currentStreakDays == 3)
     }
@@ -64,7 +52,7 @@ struct ChartsViewModelTests {
         let foodItem = makeFoodItem(calories: 100)
         let yesterdayEntry = LoggedEntry(date: calendar.date(byAdding: .day, value: -1, to: referenceDate)!, quantity: 1, mealSlotNameSnapshot: "Snack", foodItem: foodItem)
 
-        let viewModel = ChartsViewModel(profile: profile, weightEntries: [], loggedEntries: [yesterdayEntry], rangeDays: 30, referenceDate: referenceDate)
+        let viewModel = ChartsViewModel(profile: profile, loggedEntries: [yesterdayEntry], rangeDays: 30, referenceDate: referenceDate)
 
         #expect(viewModel.currentStreakDays == 0)
     }

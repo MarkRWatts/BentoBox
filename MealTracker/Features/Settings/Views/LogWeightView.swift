@@ -18,16 +18,7 @@ struct LogWeightView: View {
         NavigationStack {
             Form {
                 Section {
-                    HStack {
-                        Text("Weight")
-                        Spacer()
-                        TextField("Weight", value: $weightKG, format: .number.precision(.fractionLength(1)))
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.trailing)
-                            .frame(width: 80)
-                        Text("kg")
-                            .foregroundStyle(.secondary)
-                    }
+                    WeightInputField(unit: profile.weightUnit, weightKG: $weightKG)
                 }
             }
             .navigationTitle("Log Weight")

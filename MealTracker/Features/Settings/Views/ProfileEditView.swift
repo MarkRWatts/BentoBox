@@ -27,14 +27,21 @@ struct ProfileEditView: View {
                     DatePicker("Birth Date", selection: $profile.birthDate, displayedComponents: .date)
                 }
 
-                Section("Body Measurements") {
-                    HStack {
-                        Text("Height (cm)")
-                        Spacer()
-                        TextField("Height", value: $profile.heightCM, format: .number)
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.trailing)
+                Section("Units") {
+                    Picker("Weight Unit", selection: $profile.weightUnit) {
+                        ForEach(WeightUnit.allCases) { unit in
+                            Text(unit.displayName).tag(unit)
+                        }
                     }
+                    Picker("Height Unit", selection: $profile.heightUnit) {
+                        ForEach(HeightUnit.allCases) { unit in
+                            Text(unit.displayName).tag(unit)
+                        }
+                    }
+                }
+
+                Section("Body Measurements") {
+                    HeightInputField(unit: profile.heightUnit, heightCM: $profile.heightCM)
                 }
 
                 Section("Activity & Goal") {

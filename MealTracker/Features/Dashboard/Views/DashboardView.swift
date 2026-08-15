@@ -77,9 +77,10 @@ struct DashboardView: View {
         } label: {
             Image(systemName: "plus")
                 .font(.title2.weight(.semibold))
+                .foregroundStyle(.white)
                 .frame(width: 56, height: 56)
         }
-        .glassEffect(.regular.interactive(), in: Circle())
+        .glassEffect(.regular.tint(.accentColor).interactive(), in: Circle())
         .padding(20)
         .accessibilityLabel("Log Food")
     }

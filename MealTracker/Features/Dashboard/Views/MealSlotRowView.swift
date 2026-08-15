@@ -8,10 +8,25 @@ struct MealSlotRowView: View {
         entries.reduce(0) { $0 + $1.calories }
     }
 
+    /// Best-effort icon/color match on the slot's name (works for the default seeded slots),
+    /// falling back to a generic meal/snack look for anything the user renamed or added.
+    private var iconStyle: (symbol: String, color: Color) {
+        switch mealSlot.name.lowercased() {
+        case let name where name.contains("breakfast"): ("sun.horizon.fill", .brandProtein)
+        case let name where name.contains("lunch"): ("sun.max.fill", .brandCarbs)
+        case let name where name.contains("dinner"): ("moon.stars.fill", .brandFat)
+        default: (mealSlot.slotType == .meal ? "fork.knife" : "leaf.fill", .accentColor)
+        }
+    }
+
     var body: some View {
-        HStack {
-            Image(systemName: mealSlot.slotType == .meal ? "fork.knife" : "leaf")
-                .foregroundStyle(Color.accentColor)
+        HStack(spacing: 12) {
+            Image(systemName: iconStyle.symbol)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 32, height: 32)
+                .background(iconStyle.color.gradient, in: RoundedRectangle(cornerRadius: 9))
+
             VStack(alignment: .leading) {
                 Text(mealSlot.name)
                 Text(entries.isEmpty ? "No entries" : "\(entries.count) item\(entries.count == 1 ? "" : "s")")
@@ -20,8 +35,9 @@ struct MealSlotRowView: View {
             }
             Spacer()
             Text("\(Int(totalCalories)) cal")
-                .font(.subheadline)
+                .font(.subheadline.weight(.medium))
                 .foregroundStyle(.secondary)
         }
+        .padding(.vertical, 2)
     }
 }

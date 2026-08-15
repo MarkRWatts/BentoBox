@@ -38,21 +38,22 @@ struct OnboardingBasicsStepView: View {
                 DatePicker("Birth Date", selection: $viewModel.birthDate, displayedComponents: .date)
             }
 
+            Section("Units") {
+                Picker("Weight Unit", selection: $viewModel.weightUnit) {
+                    ForEach(WeightUnit.allCases) { unit in
+                        Text(unit.displayName).tag(unit)
+                    }
+                }
+                Picker("Height Unit", selection: $viewModel.heightUnit) {
+                    ForEach(HeightUnit.allCases) { unit in
+                        Text(unit.displayName).tag(unit)
+                    }
+                }
+            }
+
             Section("Body Measurements") {
-                HStack {
-                    Text("Height (cm)")
-                    Spacer()
-                    TextField("Height", value: $viewModel.heightCM, format: .number)
-                        .keyboardType(.decimalPad)
-                        .multilineTextAlignment(.trailing)
-                }
-                HStack {
-                    Text("Weight (kg)")
-                    Spacer()
-                    TextField("Weight", value: $viewModel.currentWeightKG, format: .number)
-                        .keyboardType(.decimalPad)
-                        .multilineTextAlignment(.trailing)
-                }
+                HeightInputField(unit: viewModel.heightUnit, heightCM: $viewModel.heightCM)
+                WeightInputField(unit: viewModel.weightUnit, weightKG: $viewModel.currentWeightKG)
             }
 
             Section {

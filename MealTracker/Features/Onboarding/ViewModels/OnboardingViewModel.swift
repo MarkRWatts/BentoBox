@@ -15,6 +15,8 @@ final class OnboardingViewModel {
     var birthDate: Date = Calendar.current.date(byAdding: .year, value: -30, to: Date()) ?? Date()
     var heightCM: Double = 170
     var currentWeightKG: Double = 70
+    var weightUnit: WeightUnit = .kilograms
+    var heightUnit: HeightUnit = .centimeters
     var activityLevel: ActivityLevel = .sedentary
     var goal: WeightGoal = .maintain
     var goalRateKgPerWeek: Double = 0.5
@@ -81,7 +83,9 @@ final class OnboardingViewModel {
             activityLevel: activityLevel,
             goal: goal,
             goalRateKgPerWeek: effectiveGoalRate,
-            useHealthKitEnergyAdjustment: useHealthKitEnergyAdjustment
+            useHealthKitEnergyAdjustment: useHealthKitEnergyAdjustment,
+            weightUnit: weightUnit,
+            heightUnit: heightUnit
         )
         context.insert(profile)
 

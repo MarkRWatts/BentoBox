@@ -15,17 +15,29 @@ struct SettingsView: View {
                 Section("Profile") {
                     LabeledContent("Sex", value: profile.sex.displayName)
                     LabeledContent("Age", value: "\(profile.ageYears)")
-                    LabeledContent("Height", value: "\(Int(profile.heightCM)) cm")
+                    LabeledContent("Height", value: profile.heightUnit.displayString(fromCM: profile.heightCM))
                     if let weight = profile.currentWeightKG {
-                        LabeledContent("Weight", value: String(format: "%.1f kg", weight))
+                        LabeledContent("Weight", value: profile.weightUnit.displayString(fromKG: weight))
                     }
                     LabeledContent("Activity Level", value: profile.activityLevel.displayName)
                     LabeledContent("Goal", value: profile.goal.displayName)
-                    Button("Log Weight") {
+                    Button {
                         isPresentingLogWeight = true
+                    } label: {
+                        Label {
+                            Text("Log Weight")
+                        } icon: {
+                            SettingsRowIcon(symbol: "scalemass.fill", color: .brandCarbs)
+                        }
                     }
-                    Button("Edit Profile") {
+                    Button {
                         isPresentingProfileEdit = true
+                    } label: {
+                        Label {
+                            Text("Edit Profile")
+                        } icon: {
+                            SettingsRowIcon(symbol: "person.fill", color: .accentColor)
+                        }
                     }
                 }
 
@@ -34,19 +46,37 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    NavigationLink("Meal Slots") {
+                    NavigationLink {
                         MealSlotEditorView(profile: profile)
+                    } label: {
+                        Label {
+                            Text("Meal Slots")
+                        } icon: {
+                            SettingsRowIcon(symbol: "fork.knife", color: .brandProtein)
+                        }
                     }
-                    NavigationLink("Calorie Cycling") {
+                    NavigationLink {
                         CalorieCyclingEditorView(profile: profile)
+                    } label: {
+                        Label {
+                            Text("Calorie Cycling")
+                        } icon: {
+                            SettingsRowIcon(symbol: "arrow.triangle.2.circlepath", color: .orange)
+                        }
                     }
                 }
 
                 Section {
-                    Toggle("Adjust Target Using Apple Health", isOn: $profile.useHealthKitEnergyAdjustment)
-                        .onChange(of: profile.useHealthKitEnergyAdjustment) { _, isOn in
-                            if isOn { Task { await healthKit.requestAuthorization() } }
+                    Toggle(isOn: $profile.useHealthKitEnergyAdjustment) {
+                        Label {
+                            Text("Adjust Target Using Apple Health")
+                        } icon: {
+                            SettingsRowIcon(symbol: "heart.fill", color: .pink)
                         }
+                    }
+                    .onChange(of: profile.useHealthKitEnergyAdjustment) { _, isOn in
+                        if isOn { Task { await healthKit.requestAuthorization() } }
+                    }
                 } header: {
                     Text("Apple Health")
                 } footer: {

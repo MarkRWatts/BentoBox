@@ -71,6 +71,60 @@ enum WeightGoal: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+enum WeightUnit: String, Codable, CaseIterable, Identifiable {
+    case kilograms
+    case pounds
+    case stone
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .kilograms: return "kg"
+        case .pounds: return "lb"
+        case .stone: return "st"
+        }
+    }
+
+    /// Formats a canonical kg value for display in this unit.
+    func displayString(fromKG kg: Double) -> String {
+        switch self {
+        case .kilograms:
+            return String(format: "%.1f kg", kg)
+        case .pounds:
+            return String(format: "%.1f lb", UnitConversion.kgToPounds(kg))
+        case .stone:
+            let (stone, pounds) = UnitConversion.kgToStoneAndPounds(kg)
+            return String(format: "%d st %.1f lb", stone, pounds)
+        }
+    }
+}
+
+enum HeightUnit: String, Codable, CaseIterable, Identifiable {
+    case centimeters
+    case feetInches
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .centimeters: return "cm"
+        case .feetInches: return "ft/in"
+        }
+    }
+
+    /// Formats a canonical cm value for display in this unit.
+    func displayString(fromCM cm: Double) -> String {
+        switch self {
+        case .centimeters:
+            return String(format: "%.0f cm", cm)
+        case .feetInches:
+            let (feet, inches) = UnitConversion.cmToFeetAndInches(cm)
+            return "\(feet)' \(String(format: "%.1f", inches))\""
+        }
+    }
+}
+
 enum EntrySource: String, Codable {
     case manual
     case healthKit

@@ -1,11 +1,5 @@
 import Foundation
 
-struct WeightTrendPoint: Identifiable {
-    let id = UUID()
-    let date: Date
-    let weightKG: Double
-}
-
 struct CalorieTrendPoint: Identifiable {
     let id = UUID()
     let date: Date
@@ -17,15 +11,13 @@ struct CalorieTrendPoint: Identifiable {
 /// isolation — mirrors DashboardViewModel's "recompute fresh from queried entries" approach.
 struct ChartsViewModel {
     let profile: UserProfile
-    let weightEntries: [BodyMetricEntry]
     let loggedEntries: [LoggedEntry]
     let rangeDays: Int
     private let calendar = Calendar.current
     private let referenceDate: Date
 
-    init(profile: UserProfile, weightEntries: [BodyMetricEntry], loggedEntries: [LoggedEntry], rangeDays: Int, referenceDate: Date = Date()) {
+    init(profile: UserProfile, loggedEntries: [LoggedEntry], rangeDays: Int, referenceDate: Date = Date()) {
         self.profile = profile
-        self.weightEntries = weightEntries
         self.loggedEntries = loggedEntries
         self.rangeDays = rangeDays
         self.referenceDate = referenceDate
@@ -37,13 +29,6 @@ struct ChartsViewModel {
 
     var calorieTarget: Double {
         TDEECalculator.dailyCalorieTarget(for: profile)
-    }
-
-    var weightTrendPoints: [WeightTrendPoint] {
-        weightEntries
-            .filter { $0.date >= cutoffDate }
-            .sorted { $0.date < $1.date }
-            .map { WeightTrendPoint(date: $0.date, weightKG: $0.weightKG) }
     }
 
     var calorieTrendPoints: [CalorieTrendPoint] {

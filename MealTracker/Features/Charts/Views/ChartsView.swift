@@ -5,20 +5,15 @@ import Charts
 struct ChartsView: View {
     let profile: UserProfile
 
-    @Query(sort: \BodyMetricEntry.date) private var allWeightEntries: [BodyMetricEntry]
     @Query(sort: \LoggedEntry.date) private var allLoggedEntries: [LoggedEntry]
     @State private var rangeDays = 30
-
-    private var weightEntries: [BodyMetricEntry] {
-        allWeightEntries.filter { $0.profile?.id == profile.id }
-    }
 
     private var loggedEntries: [LoggedEntry] {
         allLoggedEntries.filter { $0.mealSlot?.profile?.id == profile.id }
     }
 
     private var summary: ChartsViewModel {
-        ChartsViewModel(profile: profile, weightEntries: weightEntries, loggedEntries: loggedEntries, rangeDays: rangeDays)
+        ChartsViewModel(profile: profile, loggedEntries: loggedEntries, rangeDays: rangeDays)
     }
 
     var body: some View {
@@ -40,8 +35,17 @@ struct ChartsView: View {
                 }
                 .listRowBackground(Color.clear)
 
-                Section("Weight") {
-                    WeightTrendChartView(points: summary.weightTrendPoints)
+                Section("Body") {
+                    NavigationLink {
+                        WeightView(profile: profile)
+                    } label: {
+                        WeightSummaryRowView(profile: profile)
+                    }
+                    NavigationLink {
+                        BMIView(profile: profile)
+                    } label: {
+                        BMISummaryRowView(profile: profile)
+                    }
                 }
 
                 Section("Calories") {
@@ -57,13 +61,15 @@ private struct StreakCardView: View {
     let streakDays: Int
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 14) {
             Image(systemName: "flame.fill")
-                .font(.title)
-                .foregroundStyle(.orange)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 44, height: 44)
+                .background(Color.orange.gradient, in: RoundedRectangle(cornerRadius: 12))
             VStack(alignment: .leading) {
                 Text("\(streakDays) day\(streakDays == 1 ? "" : "s")")
-                    .font(.title2.bold())
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
                 Text(streakDays > 0 ? "Logging streak" : "Log a meal to start a streak")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -76,22 +82,47 @@ private struct StreakCardView: View {
     }
 }
 
-private struct WeightTrendChartView: View {
-    let points: [WeightTrendPoint]
+private struct WeightSummaryRowView: View {
+    let profile: UserProfile
 
     var body: some View {
-        if points.isEmpty {
-            ContentUnavailableView("No Weight Logged", systemImage: "chart.line.uptrend.xyaxis", description: Text("Log your weight to see a trend here."))
-                .frame(height: 180)
-        } else {
-            Chart(points) { point in
-                LineMark(x: .value("Date", point.date, unit: .day), y: .value("Weight", point.weightKG))
-                    .interpolationMethod(.catmullRom)
-                PointMark(x: .value("Date", point.date, unit: .day), y: .value("Weight", point.weightKG))
+        HStack {
+            Text("Weight")
+            Spacer()
+            if let weightKG = profile.currentWeightKG {
+                Text(profile.weightUnit.displayString(fromKG: weightKG))
+                    .foregroundStyle(.secondary)
+            } else {
+                Text("Log your weight")
+                    .foregroundStyle(.secondary)
             }
-            .foregroundStyle(Color.accentColor)
-            .frame(height: 180)
-            .accessibilityLabel("Weight trend over time")
+        }
+    }
+}
+
+private struct BMISummaryRowView: View {
+    let profile: UserProfile
+
+    private var bmi: Double? {
+        guard let weightKG = profile.currentWeightKG else { return nil }
+        return BMICalculator.bmi(weightKG: weightKG, heightCM: profile.heightCM)
+    }
+
+    var body: some View {
+        HStack {
+            Text("BMI")
+            Spacer()
+            if let bmi {
+                let category = BMICalculator.category(for: bmi)
+                Text(bmi, format: .number.precision(.fractionLength(1)))
+                    .foregroundStyle(.secondary)
+                Circle()
+                    .fill(category.color)
+                    .frame(width: 8, height: 8)
+            } else {
+                Text("Log your weight")
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 }
@@ -108,7 +139,8 @@ private struct CalorieTrendChartView: View {
             Chart {
                 ForEach(points) { point in
                     BarMark(x: .value("Date", point.date, unit: .day), y: .value("Calories", point.calories))
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(point.calories > target ? Color.brandProtein : Color.accentColor)
+                        .cornerRadius(4)
                 }
                 RuleMark(y: .value("Target", target))
                     .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [4, 4]))

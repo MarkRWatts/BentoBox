@@ -5,9 +5,9 @@ struct MacroBreakdownView: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            MacroRow(name: "Protein", consumed: summary.consumedProtein, target: summary.macroTargets.proteinGrams, color: .red)
-            MacroRow(name: "Carbs", consumed: summary.consumedCarbs, target: summary.macroTargets.carbGrams, color: .orange)
-            MacroRow(name: "Fat", consumed: summary.consumedFat, target: summary.macroTargets.fatGrams, color: .yellow)
+            MacroRow(name: "Protein", consumed: summary.consumedProtein, target: summary.macroTargets.proteinGrams, color: .brandProtein)
+            MacroRow(name: "Carbs", consumed: summary.consumedCarbs, target: summary.macroTargets.carbGrams, color: .brandCarbs)
+            MacroRow(name: "Fat", consumed: summary.consumedFat, target: summary.macroTargets.fatGrams, color: .brandFat)
         }
     }
 }
@@ -26,6 +26,9 @@ private struct MacroRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
+                Circle()
+                    .fill(color)
+                    .frame(width: 8, height: 8)
                 Text(name)
                 Spacer()
                 Text("\(Int(consumed))g / \(Int(target))g")
