@@ -125,6 +125,33 @@ struct OpenFoodFactsMappingTests {
         #expect(response.products.map(\.code) == ["111", "222"])
     }
 
+    @Test func isUsableSearchResultRequiresBarcodeAndACalorieFigure() throws {
+        let withServingCalories = try JSONDecoder().decode(OFFProduct.self, from: Data("""
+        { "code": "123", "product_name": "A", "nutriments": { "energy-kcal_serving": 100 } }
+        """.utf8))
+        #expect(withServingCalories.isUsableSearchResult)
+
+        let with100gCalories = try JSONDecoder().decode(OFFProduct.self, from: Data("""
+        { "code": "123", "product_name": "A", "nutriments": { "energy-kcal_100g": 100 } }
+        """.utf8))
+        #expect(with100gCalories.isUsableSearchResult)
+
+        let noBarcode = try JSONDecoder().decode(OFFProduct.self, from: Data("""
+        { "product_name": "A", "nutriments": { "energy-kcal_100g": 100 } }
+        """.utf8))
+        #expect(!noBarcode.isUsableSearchResult)
+
+        let noNutrimentsBlock = try JSONDecoder().decode(OFFProduct.self, from: Data("""
+        { "code": "123", "product_name": "A" }
+        """.utf8))
+        #expect(!noNutrimentsBlock.isUsableSearchResult)
+
+        let emptyNutrimentsBlock = try JSONDecoder().decode(OFFProduct.self, from: Data("""
+        { "code": "123", "product_name": "A", "nutriments": { "proteins_100g": 5 } }
+        """.utf8))
+        #expect(!emptyNutrimentsBlock.isUsableSearchResult)
+    }
+
     @Test func parseGramsExtractsLeadingNumber() {
         #expect(OpenFoodFactsMapper.parseGrams(from: "30 g") == 30)
         #expect(OpenFoodFactsMapper.parseGrams(from: "1 bar (45.5g)") == 1) // takes the leading number, not the parenthetical

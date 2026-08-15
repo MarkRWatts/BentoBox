@@ -22,6 +22,15 @@ struct OFFProduct: Decodable {
         case servingSize = "serving_size"
         case nutriments
     }
+
+    /// Excludes results with no barcode (can't be cached/logged) or no calorie figure at all —
+    /// Open Food Facts' crowd-sourced catalog has plenty of near-empty entries (a name and
+    /// nothing else) that are just noise in a search result list otherwise.
+    var isUsableSearchResult: Bool {
+        guard let code, !code.isEmpty else { return false }
+        guard let nutriments else { return false }
+        return nutriments.energyKcalServing != nil || nutriments.energyKcal100g != nil
+    }
 }
 
 /// Response shape for the text-search endpoint — a page of matching products.

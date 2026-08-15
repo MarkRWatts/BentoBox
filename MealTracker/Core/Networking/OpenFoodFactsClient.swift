@@ -43,10 +43,24 @@ struct OpenFoodFactsClient {
             throw NetworkError.invalidResponse
         }
 
-        let response: OFFSearchResponse = try await perform(url: url)
-        // A result with no barcode can't be cached or matched against future scans, so it isn't
-        // usable here even though OFF occasionally returns one.
-        return response.products.filter { $0.code?.isEmpty == false }
+        // OFF's search endpoint is noticeably flakier than the single-product lookup — it
+        // intermittently serves an HTML "temporarily unavailable" page with a 503 instead of
+        // JSON, seemingly under normal load rather than only when truly down. That clears up
+        // within a request or two, so retry a couple of times before surfacing an error rather
+        // than failing the search on the first transient blip.
+        var lastError: Error = NetworkError.invalidResponse
+        for attempt in 0..<3 {
+            do {
+                let response: OFFSearchResponse = try await perform(url: url)
+                return response.products.filter(\.isUsableSearchResult)
+            } catch {
+                lastError = error
+                if attempt < 2 {
+                    try? await Task.sleep(for: .milliseconds(500))
+                }
+            }
+        }
+        throw lastError
     }
 
     private func perform<T: Decodable>(url: URL) async throws -> T {

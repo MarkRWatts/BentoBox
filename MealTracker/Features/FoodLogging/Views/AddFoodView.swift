@@ -85,8 +85,16 @@ struct AddFoodView: View {
             }
             .listRowBackground(Color.clear)
         } else if let searchErrorMessage {
-            ContentUnavailableView("Search Failed", systemImage: "wifi.slash", description: Text(searchErrorMessage))
-                .listRowBackground(Color.clear)
+            ContentUnavailableView {
+                Label("Search Failed", systemImage: "wifi.slash")
+            } description: {
+                Text(searchErrorMessage)
+            } actions: {
+                Button("Try Again") {
+                    Task { await search() }
+                }
+            }
+            .listRowBackground(Color.clear)
         } else if searchResults.isEmpty {
             ContentUnavailableView.search(text: searchQuery)
                 .listRowBackground(Color.clear)
@@ -168,14 +176,29 @@ private struct SearchResultRowView: View {
         return (trimmed?.isEmpty == false) ? trimmed! : "Unknown Product"
     }
 
+    /// Reuses the mapper purely to derive display figures — nothing here is inserted into the
+    /// model context, that only happens if this result is actually picked.
+    private var preview: FoodItem {
+        OpenFoodFactsMapper.makeFoodItem(from: product, barcode: product.code ?? "")
+    }
+
+    private var subtitle: String {
+        var parts: [String] = []
+        if let brand = product.brands?.trimmingCharacters(in: .whitespacesAndNewlines), !brand.isEmpty {
+            parts.append(brand)
+        }
+        let preview = preview
+        parts.append("\(Int(preview.caloriesPerServing)) cal")
+        parts.append(preview.servingSizeDescription)
+        return parts.joined(separator: " · ")
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(name)
-            if let brand = product.brands?.trimmingCharacters(in: .whitespacesAndNewlines), !brand.isEmpty {
-                Text(brand)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+            Text(subtitle)
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 }
