@@ -1,73 +1,47 @@
 import Foundation
 import FoundationModels
 
-/// Real-device testing showed the model can correctly transcribe numbers off a label, but can't
-/// reliably apply a *judgment call* ("always prefer the per-serving column") consistently across
-/// every field in one pass — different fields in the same extraction ended up pulled from
-/// different columns. So the model is only asked to transcribe both columns verbatim (a
-/// mechanical task it does reliably); which column is "the serving one" is then decided
-/// deterministically in Swift, in `resolved*` below.
-@Generable
+/// Final, resolved nutrition facts for one serving — never partially filled with the wrong
+/// column's numbers, since column selection and numeric parsing both happen in deterministic
+/// Swift code before this is constructed (see NutritionLabelExtractor).
 struct ExtractedNutritionLabel {
-    @Guide(description: "Product or food name if visible on the label, else empty string")
     var productName: String
-
-    @Guide(description: "The header text of the first (left-most) nutrition value column, e.g. 'Per 100g' or '1 cup (240g)' on a single-column label")
-    var firstColumnHeader: String
-
-    @Guide(description: "The header text of the second nutrition value column, e.g. 'Per 40g serving'. Empty string if the label has only one value column")
-    var secondColumnHeader: String
-
-    @Guide(description: "Energy in kcal (Calories, not kJ) from the first column")
-    var firstColumnCalories: Double
-    @Guide(description: "Energy in kcal (Calories, not kJ) from the second column, 0 if there is no second column")
-    var secondColumnCalories: Double
-
-    @Guide(description: "Grams of fat from the first column's 'Fat' row — never its 'of which saturates' sub-row")
-    var firstColumnFatGrams: Double
-    @Guide(description: "Grams of fat from the second column's 'Fat' row, 0 if no second column — never its 'of which saturates' sub-row")
-    var secondColumnFatGrams: Double
-
-    @Guide(description: "Grams of carbohydrate from the first column's 'Carbohydrate' row — never its 'of which sugars' sub-row")
-    var firstColumnCarbGrams: Double
-    @Guide(description: "Grams of carbohydrate from the second column's 'Carbohydrate' row, 0 if no second column — never its 'of which sugars' sub-row")
-    var secondColumnCarbGrams: Double
-
-    @Guide(description: "Grams of protein from the first column")
-    var firstColumnProteinGrams: Double
-    @Guide(description: "Grams of protein from the second column, 0 if no second column")
-    var secondColumnProteinGrams: Double
-
-    @Guide(description: "Confidence from 0 to 1 that the extracted values are complete and correct")
+    var servingSizeDescription: String
+    var calories: Double
+    var fatGrams: Double
+    var carbGrams: Double
+    var proteinGrams: Double
     var confidence: Double
 }
 
-extension ExtractedNutritionLabel {
-    private static func looksLikePer100(_ header: String) -> Bool {
-        let normalized = header.lowercased()
-        return normalized.contains("100g") || normalized.contains("100 g")
-            || normalized.contains("100ml") || normalized.contains("100 ml")
-    }
+/// What the model is actually asked to do: point at the right rows, verbatim. Two rounds of
+/// real-device testing showed it cannot reliably *transcribe numbers into the right output
+/// fields* across a whole table in one pass (values ended up swapped between columns, and even
+/// between unrelated nutrients — e.g. Salt's value landing in the Protein field). Copying a
+/// short span of text it can already see, unmodified, is a much easier and more reliable task
+/// for a small on-device model than re-typing numbers into a battery of separate fields.
+@Generable
+struct NutritionLabelRowSelection {
+    @Guide(description: "Product or food name if visible in the text, else empty string")
+    var productName: String
 
-    /// The second column is "the serving one" only when the first column is a generic per-100g/
-    /// per-100ml figure and a distinct, non-per-100 second column exists — this stays correct
-    /// however the label orders its columns, since it keys off header text, not position.
-    var prefersSecondColumn: Bool {
-        let trimmedSecond = secondColumnHeader.trimmingCharacters(in: .whitespaces)
-        guard !trimmedSecond.isEmpty else { return false }
-        return Self.looksLikePer100(firstColumnHeader) && !Self.looksLikePer100(trimmedSecond)
-    }
+    @Guide(description: "The header row naming the value columns, copied character-for-character exactly as it appears in the OCR text — do not reformat or reorder it")
+    var headerRow: String
 
-    var resolvedServingSizeDescription: String {
-        let header = (prefersSecondColumn ? secondColumnHeader : firstColumnHeader)
-            .trimmingCharacters(in: .whitespaces)
-        return header.isEmpty ? "1 serving" : header
-    }
+    @Guide(description: "The row for Energy (kJ/kcal), copied character-for-character exactly as it appears in the OCR text. Empty string if there is no energy row")
+    var energyRow: String
 
-    var resolvedCalories: Double { prefersSecondColumn ? secondColumnCalories : firstColumnCalories }
-    var resolvedFatGrams: Double { prefersSecondColumn ? secondColumnFatGrams : firstColumnFatGrams }
-    var resolvedCarbGrams: Double { prefersSecondColumn ? secondColumnCarbGrams : firstColumnCarbGrams }
-    var resolvedProteinGrams: Double { prefersSecondColumn ? secondColumnProteinGrams : firstColumnProteinGrams }
+    @Guide(description: "The row for total Fat — not the 'of which saturates' sub-row beneath it — copied character-for-character exactly as it appears in the OCR text. Empty string if there is no fat row")
+    var fatRow: String
+
+    @Guide(description: "The row for total Carbohydrate — not the 'of which sugars' sub-row beneath it — copied character-for-character exactly as it appears in the OCR text. Empty string if there is no carbohydrate row")
+    var carbRow: String
+
+    @Guide(description: "The row for Protein, copied character-for-character exactly as it appears in the OCR text. Empty string if there is no protein row")
+    var proteinRow: String
+
+    @Guide(description: "Confidence from 0 to 1 that the rows above were correctly identified")
+    var confidence: Double
 }
 
 enum NutritionLabelExtractor {
@@ -103,42 +77,100 @@ enum NutritionLabelExtractor {
         }
 
         let session = LanguageModelSession(instructions: """
-            You extract structured nutrition facts from OCR text taken from a photo of a \
-            nutrition label. The OCR text is laid out as rows top-to-bottom, with each row's \
-            column values separated by " | " in left-to-right order matching the header row.
+            You are given OCR text from a photo of a nutrition label, laid out as rows \
+            top-to-bottom with each row's column values separated by " | " in left-to-right \
+            order matching the header row.
 
-            Nutrition labels usually have one or two value columns — for example a single \
-            US-style "1 cup (240g)" column, or a UK/EU-style "Per 100g" column alongside a \
-            "Per 40g serving" column. Transcribe the first (left-most) value column into the \
-            "firstColumn..." fields, copying its header text exactly. If a second, distinct value \
-            column exists, transcribe it into the "secondColumn..." fields the same way; if there \
-            is no second column, leave secondColumnHeader empty and its values at 0. Do not judge \
-            which column is more important — just transcribe what each column actually shows.
+            Find these rows and copy each one out character-for-character exactly as it appears \
+            in the OCR text — do not reformat, reorder, retype the numbers, or fix anything:
+            - The header row that names the value columns (e.g. "Typical Values | Per 100g | \
+            Per 40g serving")
+            - The Energy row (kJ/kcal)
+            - The total Fat row — not its "of which saturates" sub-row
+            - The total Carbohydrate row — not its "of which sugars" sub-row
+            - The Protein row
 
-            If the label has a third "Reference Intake" / "%RI" / "RI*" column, ignore it \
-            entirely — it does not describe this food, and must not be treated as the first or \
-            second column.
+            If a label has a third "Reference Intake" / "%RI" / "RI*" column, leave it in place \
+            when you copy each row — it will be handled separately, you don't need to remove it.
 
-            For every nutrient, match the row by its exact label: "Fat" is a different row from \
-            "of which saturates" beneath it, and "Carbohydrate" is a different row from "of which \
-            sugars" beneath it. Always use the parent row's own value ("Fat", "Carbohydrate"), \
-            never a "of which" sub-row's value, even though the sub-row is usually smaller and \
-            listed directly below.
-
-            Energy is often given in both kJ and kcal within the same column, either as two \
-            separate values ("1549kJ | 366kcal") or one combined token joined by a slash \
-            ("764kJ/181kcal", kJ first then kcal). Report only the kcal figure — kJ is roughly \
-            4x the kcal value for the same amount, so a calories figure that looks about 4x too \
-            high means the kJ number was used by mistake.
-
-            Only use values explicitly present in the text. If a value is missing, use 0. Do not \
-            guess or estimate.
+            If any of these rows isn't present in the text, leave that field as an empty string. \
+            Do not invent a row that isn't there, and do not compute or guess any values.
             """)
 
         let response = try await session.respond(
             to: "OCR text (rows top-to-bottom, columns left-to-right separated by \" | \"):\n\(ocrText)",
-            generating: ExtractedNutritionLabel.self
+            generating: NutritionLabelRowSelection.self
         )
-        return response.content
+        return Self.resolve(response.content)
+    }
+
+    // MARK: - Deterministic resolution
+
+    /// Turns the model's row selection into final values entirely with string parsing — no
+    /// numeric transcription by the model is trusted here.
+    static func resolve(_ selection: NutritionLabelRowSelection) -> ExtractedNutritionLabel {
+        let columns = dataColumnHeaders(from: selection.headerRow)
+        let index = preferredColumnIndex(in: columns)
+
+        return ExtractedNutritionLabel(
+            productName: selection.productName,
+            servingSizeDescription: columns[safe: index] ?? "1 serving",
+            calories: numbers(matching: #"([\d.]+)\s*kcal"#, in: selection.energyRow)[safe: index] ?? 0,
+            fatGrams: numbers(matching: #"([\d.]+)\s*g"#, in: selection.fatRow)[safe: index] ?? 0,
+            carbGrams: numbers(matching: #"([\d.]+)\s*g"#, in: selection.carbRow)[safe: index] ?? 0,
+            proteinGrams: numbers(matching: #"([\d.]+)\s*g"#, in: selection.proteinRow)[safe: index] ?? 0,
+            confidence: selection.confidence
+        )
+    }
+
+    /// The value-column headers from a row like "Typical Values | Per 100g | Per 40g serving".
+    /// Our OCR reconstruction always orders each row's fragments left-to-right, so the row-label
+    /// column ("Typical Values") is reliably the first segment regardless of its exact wording —
+    /// safer than matching on keywords like "per", which also appears in label-column headers
+    /// such as "Amount Per Serving". Any Reference Intake column is dropped outright.
+    static func dataColumnHeaders(from headerRow: String) -> [String] {
+        let segments = headerRow
+            .components(separatedBy: "|")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+        guard segments.count > 1 else { return segments }
+        return segments.dropFirst().filter { !looksLikeReferenceIntake($0) }
+    }
+
+    /// Prefers a per-serving column over a per-100g/per-100ml one, wherever it falls in the
+    /// (already Reference-Intake-filtered) column list — this is correct regardless of which
+    /// order the label itself puts the columns in, since it keys off header text, not position.
+    static func preferredColumnIndex(in columns: [String]) -> Int {
+        guard columns.count > 1 else { return 0 }
+        return columns.firstIndex { !looksLikePer100($0) } ?? 0
+    }
+
+    private static func looksLikeReferenceIntake(_ header: String) -> Bool {
+        let normalized = header.lowercased().replacingOccurrences(of: " ", with: "")
+        return normalized.contains("referenceintake") || normalized.contains("%ri") || normalized.contains("ri*")
+    }
+
+    private static func looksLikePer100(_ header: String) -> Bool {
+        let normalized = header.lowercased()
+        return normalized.contains("100g") || normalized.contains("100 g")
+            || normalized.contains("100ml") || normalized.contains("100 ml")
+    }
+
+    /// Extracts every number immediately followed by `unit` (e.g. "kcal" or "g") from `text`, in
+    /// left-to-right order — e.g. matching only "kcal" numbers on "764kJ/181kcal" skips the kJ
+    /// figure automatically, without the model ever having to reason about which unit is which.
+    static func numbers(matching pattern: String, in text: String) -> [Double] {
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else { return [] }
+        let range = NSRange(text.startIndex..., in: text)
+        return regex.matches(in: text, range: range).compactMap { match in
+            guard let numberRange = Range(match.range(at: 1), in: text) else { return nil }
+            return Double(text[numberRange])
+        }
+    }
+}
+
+extension Array {
+    subscript(safe index: Int) -> Element? {
+        indices.contains(index) ? self[index] : nil
     }
 }

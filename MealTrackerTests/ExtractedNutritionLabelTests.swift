@@ -1,75 +1,68 @@
 import Testing
 @testable import MealTracker
 
-struct ExtractedNutritionLabelTests {
-    @Test func prefersServingColumnWhenFirstColumnIsPer100() {
-        let extracted = ExtractedNutritionLabel(
+struct NutritionLabelExtractorParsingTests {
+    @Test func dataColumnHeadersDropsLabelColumnAndReferenceIntake() {
+        let headerRow = "Typical Values | Per 100g | Per 40g serving | % RI"
+        let columns = NutritionLabelExtractor.dataColumnHeaders(from: headerRow)
+        #expect(columns == ["Per 100g", "Per 40g serving"])
+    }
+
+    @Test func dataColumnHeadersHandlesSingleUSColumn() {
+        let headerRow = "Amount Per Serving | 1 cup (240g)"
+        let columns = NutritionLabelExtractor.dataColumnHeaders(from: headerRow)
+        #expect(columns == ["1 cup (240g)"])
+    }
+
+    @Test func preferredColumnIndexPicksServingOverPer100RegardlessOfOrder() {
+        #expect(NutritionLabelExtractor.preferredColumnIndex(in: ["Per 100g", "Per 40g serving"]) == 1)
+        #expect(NutritionLabelExtractor.preferredColumnIndex(in: ["Per 40g serving", "Per 100g"]) == 0)
+        #expect(NutritionLabelExtractor.preferredColumnIndex(in: ["1 cup (240g)"]) == 0)
+        #expect(NutritionLabelExtractor.preferredColumnIndex(in: []) == 0)
+    }
+
+    @Test func numbersExtractsOnlyKcalIgnoringKJ() {
+        #expect(NutritionLabelExtractor.numbers(matching: #"([\d.]+)\s*kcal"#, in: "1549kJ | 366kcal | 620kJ | 146kcal") == [366, 146])
+        #expect(NutritionLabelExtractor.numbers(matching: #"([\d.]+)\s*kcal"#, in: "764kJ/181kcal") == [181])
+    }
+
+    @Test func numbersExtractsGramValuesIgnoringPercentages() {
+        #expect(NutritionLabelExtractor.numbers(matching: #"([\d.]+)\s*g"#, in: "Fat | 2.2g | 0.9g | 10%") == [2.2, 0.9])
+    }
+
+    @Test func resolveEndToEndPicksServingColumnAcrossAllFields() {
+        let selection = NutritionLabelRowSelection(
             productName: "Shreddies",
-            firstColumnHeader: "Per 100g",
-            secondColumnHeader: "Per 40g serving",
-            firstColumnCalories: 366, secondColumnCalories: 146,
-            firstColumnFatGrams: 2.2, secondColumnFatGrams: 0.9,
-            firstColumnCarbGrams: 71.4, secondColumnCarbGrams: 28.6,
-            firstColumnProteinGrams: 9.7, secondColumnProteinGrams: 3.9,
+            headerRow: "Typical Values | Per 100g | Per 40g serving",
+            energyRow: "Energy | 1549kJ | 366kcal | 620kJ | 146kcal",
+            fatRow: "Fat | 2.2g | 0.9g",
+            carbRow: "Carbohydrate | 71.4g | 28.6g",
+            proteinRow: "Protein | 9.7g | 3.9g",
             confidence: 0.9
         )
 
-        #expect(extracted.prefersSecondColumn)
-        #expect(extracted.resolvedCalories == 146)
-        #expect(extracted.resolvedFatGrams == 0.9)
-        #expect(extracted.resolvedCarbGrams == 28.6)
-        #expect(extracted.resolvedProteinGrams == 3.9)
-        #expect(extracted.resolvedServingSizeDescription == "Per 40g serving")
+        let result = NutritionLabelExtractor.resolve(selection)
+        #expect(result.servingSizeDescription == "Per 40g serving")
+        #expect(result.calories == 146)
+        #expect(result.fatGrams == 0.9)
+        #expect(result.carbGrams == 28.6)
+        #expect(result.proteinGrams == 3.9)
     }
 
-    @Test func usesFirstColumnWhenServingColumnComesFirst() {
-        // Column order isn't guaranteed to be [100g, serving] — a label listing the serving
-        // column first should still resolve to that column, not flip to per-100g.
-        let extracted = ExtractedNutritionLabel(
-            productName: "Cereal",
-            firstColumnHeader: "Per 40g serving",
-            secondColumnHeader: "Per 100g",
-            firstColumnCalories: 146, secondColumnCalories: 366,
-            firstColumnFatGrams: 0.9, secondColumnFatGrams: 2.2,
-            firstColumnCarbGrams: 28.6, secondColumnCarbGrams: 71.4,
-            firstColumnProteinGrams: 3.9, secondColumnProteinGrams: 9.7,
-            confidence: 0.9
-        )
-
-        #expect(!extracted.prefersSecondColumn)
-        #expect(extracted.resolvedCalories == 146)
-        #expect(extracted.resolvedServingSizeDescription == "Per 40g serving")
-    }
-
-    @Test func usesFirstColumnForSingleColumnUSLabel() {
-        let extracted = ExtractedNutritionLabel(
+    @Test func resolveHandlesSingleColumnUSLabel() {
+        let selection = NutritionLabelRowSelection(
             productName: "Peanut Butter",
-            firstColumnHeader: "1 cup (240g)",
-            secondColumnHeader: "",
-            firstColumnCalories: 190, secondColumnCalories: 0,
-            firstColumnFatGrams: 16, secondColumnFatGrams: 0,
-            firstColumnCarbGrams: 6, secondColumnCarbGrams: 0,
-            firstColumnProteinGrams: 7, secondColumnProteinGrams: 0,
+            headerRow: "Amount Per Serving | 1 cup (240g)",
+            energyRow: "Calories | 190kcal",
+            fatRow: "Total Fat | 16g",
+            carbRow: "Total Carbohydrate | 6g",
+            proteinRow: "Protein | 7g",
             confidence: 0.9
         )
 
-        #expect(!extracted.prefersSecondColumn)
-        #expect(extracted.resolvedCalories == 190)
-        #expect(extracted.resolvedServingSizeDescription == "1 cup (240g)")
-    }
-
-    @Test func fallsBackToGenericServingWhenNoHeaderPresent() {
-        let extracted = ExtractedNutritionLabel(
-            productName: "",
-            firstColumnHeader: "",
-            secondColumnHeader: "",
-            firstColumnCalories: 0, secondColumnCalories: 0,
-            firstColumnFatGrams: 0, secondColumnFatGrams: 0,
-            firstColumnCarbGrams: 0, secondColumnCarbGrams: 0,
-            firstColumnProteinGrams: 0, secondColumnProteinGrams: 0,
-            confidence: 0
-        )
-
-        #expect(extracted.resolvedServingSizeDescription == "1 serving")
+        let result = NutritionLabelExtractor.resolve(selection)
+        #expect(result.servingSizeDescription == "1 cup (240g)")
+        #expect(result.calories == 190)
+        #expect(result.fatGrams == 16)
     }
 }
