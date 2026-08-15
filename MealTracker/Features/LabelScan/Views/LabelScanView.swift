@@ -8,6 +8,7 @@ struct LabelScanView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel = LabelScanViewModel()
     @State private var photosPickerItem: PhotosPickerItem?
+    @State private var isPresentingManualEntry = false
 
     private var isCameraAvailable: Bool {
         UIImagePickerController.isSourceTypeAvailable(.camera)
@@ -30,6 +31,7 @@ struct LabelScanView: View {
                         Text(message)
                     } actions: {
                         Button("Try Again") { viewModel.reset() }
+                        Button("Enter Manually") { isPresentingManualEntry = true }
                     }
                 case .error(let message):
                     ContentUnavailableView {
@@ -38,6 +40,7 @@ struct LabelScanView: View {
                         Text(message)
                     } actions: {
                         Button("Try Again") { viewModel.reset() }
+                        Button("Enter Manually") { isPresentingManualEntry = true }
                     }
                 }
             }
@@ -47,6 +50,9 @@ struct LabelScanView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
+            }
+            .sheet(isPresented: $isPresentingManualEntry) {
+                ManualFoodEntryView(mealSlot: mealSlot, onSaved: dismiss.callAsFunction)
             }
         }
     }
