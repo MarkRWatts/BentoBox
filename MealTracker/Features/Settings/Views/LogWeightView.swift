@@ -7,7 +7,6 @@ struct LogWeightView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @State private var weightKG: Double
-    @State private var healthKit = HealthKitManager.shared
 
     init(profile: UserProfile) {
         self.profile = profile
@@ -29,7 +28,7 @@ struct LogWeightView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        Task { await save() }
+                        save()
                     }
                     .disabled(weightKG <= 0)
                 }
@@ -37,12 +36,10 @@ struct LogWeightView: View {
         }
     }
 
-    private func save() async {
-        let date = Date()
-        let entry = BodyMetricEntry(date: date, weightKG: weightKG, source: .manual, profile: profile)
+    private func save() {
+        let entry = BodyMetricEntry(date: Date(), weightKG: weightKG, source: .manual, profile: profile)
         modelContext.insert(entry)
         try? modelContext.save()
-        await healthKit.saveBodyMass(kg: weightKG, date: date)
         dismiss()
     }
 }

@@ -13,7 +13,7 @@ settings:
     SWIFT_STRICT_CONCURRENCY: complete
     ENABLE_PREVIEWS: YES
     IPHONEOS_DEPLOYMENT_TARGET: "26.0"
-    DEVELOPMENT_TEAM: "3PYHQMS6G6"
+    DEVELOPMENT_TEAM: "2Y2TMF4L4P"
 
 targets:
   MealTracker:
@@ -32,12 +32,9 @@ targets:
         UISupportedInterfaceOrientations~ipad:
           - UIInterfaceOrientationPortrait
         NSCameraUsageDescription: "Bento Box uses your camera to scan barcodes and nutrition labels."
-        NSHealthShareUsageDescription: "Bento Box reads your steps and active energy to personalize your daily calorie budget, and reads your weight history to show trends."
-        NSHealthUpdateUsageDescription: "Bento Box writes the food and weight you log so it's available in the Health app."
     entitlements:
       path: Generated/MealTracker.entitlements
       properties:
-        com.apple.developer.healthkit: true
         com.apple.security.application-groups:
           - group.com.markwatts.MealTracker
     settings:

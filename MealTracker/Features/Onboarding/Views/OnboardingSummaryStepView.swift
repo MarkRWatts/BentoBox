@@ -19,12 +19,6 @@ struct OnboardingSummaryStepView: View {
             }
 
             Section {
-                Toggle("Connect Apple Health", isOn: $viewModel.useHealthKitEnergyAdjustment)
-            } footer: {
-                Text("Uses your actual activity from Apple Health to adjust your calorie target day to day, instead of a fixed activity level. You can turn this on or off later in Settings.")
-            }
-
-            Section {
                 Button("Get Started") {
                     onComplete()
                 }

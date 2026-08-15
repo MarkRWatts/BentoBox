@@ -34,7 +34,7 @@ struct ProductLookupResultView: View {
 
             Section {
                 Button("Add to \(mealSlot.name)") {
-                    Task { await logEntry() }
+                    logEntry()
                 }
                 .fontWeight(.semibold)
             }
@@ -43,7 +43,7 @@ struct ProductLookupResultView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    private func logEntry() async {
+    private func logEntry() {
         foodItem.lastUsedAt = Date()
         let entry = LoggedEntry(
             date: Date(),
@@ -54,7 +54,6 @@ struct ProductLookupResultView: View {
         )
         modelContext.insert(entry)
         try? modelContext.save()
-        await entry.syncToHealthKit(context: modelContext)
         onLogged()
     }
 }

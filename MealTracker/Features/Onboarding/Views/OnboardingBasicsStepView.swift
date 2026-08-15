@@ -5,30 +5,6 @@ struct OnboardingBasicsStepView: View {
 
     var body: some View {
         Form {
-            if HealthKitManager.isHealthDataAvailable {
-                Section {
-                    Button {
-                        Task { await viewModel.importFromHealthKit() }
-                    } label: {
-                        if viewModel.isImportingFromHealthKit {
-                            HStack {
-                                ProgressView()
-                                Text("Importing from Apple Health…")
-                            }
-                        } else {
-                            Label("Import from Apple Health", systemImage: "heart.fill")
-                        }
-                    }
-                    .disabled(viewModel.isImportingFromHealthKit)
-                } footer: {
-                    if viewModel.didImportFromHealthKit {
-                        Text("Filled in what Apple Health has. Double-check the fields below before continuing.")
-                    } else {
-                        Text("Prefills your sex, birth date, height, and weight from Apple Health, if available.")
-                    }
-                }
-            }
-
             Section("About You") {
                 Picker("Sex", selection: $viewModel.sex) {
                     ForEach(BiologicalSex.allCases) { sex in

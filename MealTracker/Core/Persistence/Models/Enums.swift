@@ -127,7 +127,6 @@ enum HeightUnit: String, Codable, CaseIterable, Identifiable {
 
 enum EntrySource: String, Codable {
     case manual
-    case healthKit
 }
 
 enum MealSlotType: String, Codable {

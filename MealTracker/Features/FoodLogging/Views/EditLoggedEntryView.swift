@@ -77,7 +77,7 @@ struct EditLoggedEntryView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        Task { await save() }
+                        save()
                     }
                     .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
@@ -85,7 +85,7 @@ struct EditLoggedEntryView: View {
         }
     }
 
-    private func save() async {
+    private func save() {
         entry.quantity = quantity
 
         if hasNutritionChanges() {
@@ -115,13 +115,7 @@ struct EditLoggedEntryView: View {
             }
         }
 
-        if entry.healthKitSyncedObjectID != nil {
-            await entry.removeFromHealthKit()
-            entry.healthKitSyncedObjectID = nil
-        }
         try? modelContext.save()
-        await entry.syncToHealthKit(context: modelContext)
-
         dismiss()
     }
 

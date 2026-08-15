@@ -7,7 +7,6 @@ struct DashboardView: View {
 
     @Query(sort: \MealSlotConfig.sortOrder) private var allMealSlots: [MealSlotConfig]
     @Query private var todaysEntries: [LoggedEntry]
-    @State private var activeEnergyBurnedToday: Double?
     @State private var path = NavigationPath()
 
     init(profile: UserProfile) {
@@ -25,7 +24,7 @@ struct DashboardView: View {
     }
 
     private var summary: DashboardViewModel {
-        DashboardViewModel(profile: profile, todaysEntries: todaysEntries, activeEnergyBurnedToday: activeEnergyBurnedToday)
+        DashboardViewModel(profile: profile, todaysEntries: todaysEntries)
     }
 
     var body: some View {
@@ -55,11 +54,9 @@ struct DashboardView: View {
                 MealSlotDetailView(mealSlot: slot)
             }
             .onAppear {
-                Task { await refreshHealthKitEnergy() }
                 writeWidgetSnapshot()
             }
             .onChange(of: todaysEntries) { _, _ in writeWidgetSnapshot() }
-            .onChange(of: activeEnergyBurnedToday) { _, _ in writeWidgetSnapshot() }
             .overlay(alignment: .bottomTrailing) {
                 quickAddButton
             }
@@ -72,19 +69,6 @@ struct DashboardView: View {
     /// GlassEffectContainer morph animation: a morph is a bigger, higher-risk lift to get right
     /// without a device to check the animation against, and a plain menu already delivers the
     /// "reach a meal slot in one tap from anywhere on Today" goal.
-    /// Runs on every appearance (not just the first) so turning HealthKit adjustment on from
-    /// Settings takes effect the next time you're back on Today, and so today's active energy
-    /// stays current as it changes through the day — a one-shot `.task` only ever ran once per
-    /// view lifetime, which made the toggle look like it did nothing if flipped after Today had
-    /// already appeared once.
-    private func refreshHealthKitEnergy() async {
-        guard profile.useHealthKitEnergyAdjustment else {
-            activeEnergyBurnedToday = nil
-            return
-        }
-        activeEnergyBurnedToday = await HealthKitManager.shared.activeEnergyBurnedToday()
-    }
-
     /// The widget extension can't share this app's live SwiftData container, so every time
     /// Today's numbers change we hand it a small snapshot through the shared App Group instead
     /// and nudge WidgetKit to redraw immediately rather than waiting for its own refresh policy.

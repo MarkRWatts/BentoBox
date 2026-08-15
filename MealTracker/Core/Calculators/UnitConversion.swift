@@ -1,9 +1,9 @@
 import Foundation
 
 /// Pure kg/cm <-> display-unit conversions. The app's canonical stored unit is always metric
-/// (kg, cm) — every calculator, HealthKit sample, and SwiftData field stays in metric so none of
-/// that code needs to know about unit preference. This is purely a UI-boundary concern: format a
-/// stored metric value for display, or parse a user-entered display value back into metric.
+/// (kg, cm) — every calculator and SwiftData field stays in metric so none of that code needs to
+/// know about unit preference. This is purely a UI-boundary concern: format a stored metric value
+/// for display, or parse a user-entered display value back into metric.
 enum UnitConversion {
     private static let kgPerPound = 0.45359237
     private static let poundsPerStone = 14.0

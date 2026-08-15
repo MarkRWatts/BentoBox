@@ -5,9 +5,6 @@ import Foundation
 struct DashboardViewModel {
     let profile: UserProfile
     let todaysEntries: [LoggedEntry]
-    /// Today's HealthKit active-energy-burned total, when available and opted in. Nil skips the
-    /// HealthKit-adjusted path entirely and falls back to the fixed activity-level estimate.
-    var activeEnergyBurnedToday: Double?
     /// Injectable for testability; defaults to today. 1 = Sunday ... 7 = Saturday.
     var weekday: Int = Calendar.current.component(.weekday, from: Date())
 
@@ -15,24 +12,9 @@ struct DashboardViewModel {
         todaysEntries.reduce(0) { $0 + $1.calories }
     }
 
-    /// The target before calorie cycling is applied — either the fixed activity-level estimate
-    /// or the HealthKit-adjusted one.
+    /// The target before calorie cycling is applied.
     private var baselineCalorieTarget: Double {
-        guard profile.useHealthKitEnergyAdjustment, let activeEnergyBurnedToday else {
-            return TDEECalculator.dailyCalorieTarget(for: profile)
-        }
-        let bmrValue = TDEECalculator.bmr(
-            sex: profile.sex,
-            weightKG: profile.currentWeightKG ?? 70,
-            heightCM: profile.heightCM,
-            ageYears: profile.ageYears
-        )
-        return EnergyAdjustmentCalculator.adjustedCalorieTarget(
-            bmr: bmrValue,
-            activeEnergyBurnedToday: activeEnergyBurnedToday,
-            goal: profile.goal,
-            goalRateKgPerWeek: profile.goalRateKgPerWeek
-        )
+        TDEECalculator.dailyCalorieTarget(for: profile)
     }
 
     private var calorieDayOverridesByWeekday: [Int: Double] {

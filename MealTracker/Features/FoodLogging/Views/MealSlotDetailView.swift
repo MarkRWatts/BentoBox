@@ -52,9 +52,7 @@ struct MealSlotDetailView: View {
                         }
                     }
                 }
-                .onDelete { offsets in
-                    Task { await deleteEntries(at: offsets) }
-                }
+                .onDelete(perform: deleteEntries)
             } header: {
                 Text("\(Int(totalCalories)) calories logged")
             }
@@ -93,11 +91,9 @@ struct MealSlotDetailView: View {
         }
     }
 
-    private func deleteEntries(at offsets: IndexSet) async {
+    private func deleteEntries(at offsets: IndexSet) {
         for index in offsets {
-            let entry = entries[index]
-            await entry.removeFromHealthKit()
-            modelContext.delete(entry)
+            modelContext.delete(entries[index])
         }
         try? modelContext.save()
     }

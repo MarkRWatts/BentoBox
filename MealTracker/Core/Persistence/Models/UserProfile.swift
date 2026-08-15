@@ -11,10 +11,9 @@ final class UserProfile {
     var goal: WeightGoal = WeightGoal.maintain
     var goalRateKgPerWeek: Double = 0
     var proteinGramsPerKgOverride: Double?
-    var useHealthKitEnergyAdjustment: Bool = false
     var isCalorieCyclingEnabled: Bool = false
-    /// Display/input unit preference only — every stored value (this field, HealthKit samples,
-    /// calculator inputs) stays in metric regardless of this setting.
+    /// Display/input unit preference only — every stored value (this field, calculator inputs)
+    /// stays in metric regardless of this setting.
     var weightUnit: WeightUnit = WeightUnit.kilograms
     var heightUnit: HeightUnit = HeightUnit.centimeters
     var createdAt: Date = Date()
@@ -37,7 +36,6 @@ final class UserProfile {
         goal: WeightGoal,
         goalRateKgPerWeek: Double,
         proteinGramsPerKgOverride: Double? = nil,
-        useHealthKitEnergyAdjustment: Bool = false,
         weightUnit: WeightUnit = .kilograms,
         heightUnit: HeightUnit = .centimeters
     ) {
@@ -49,7 +47,6 @@ final class UserProfile {
         self.goal = goal
         self.goalRateKgPerWeek = goalRateKgPerWeek
         self.proteinGramsPerKgOverride = proteinGramsPerKgOverride
-        self.useHealthKitEnergyAdjustment = useHealthKitEnergyAdjustment
         self.weightUnit = weightUnit
         self.heightUnit = heightUnit
         self.createdAt = Date()
