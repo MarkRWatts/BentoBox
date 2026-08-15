@@ -6,7 +6,7 @@ struct ExtractedNutritionLabel {
     @Guide(description: "Product or food name if visible on the label, else empty string")
     var productName: String
 
-    @Guide(description: "Serving size as written on the label, e.g. '1 cup (240g)'")
+    @Guide(description: "Serving size as written on the label, e.g. '1 cup (240g)' or '40g serving' if the label's per-serving column header gives it that way")
     var servingSizeDescription: String
 
     @Guide(description: "Calories per serving")
@@ -68,12 +68,21 @@ enum NutritionLabelExtractor {
 
         let session = LanguageModelSession(instructions: """
             You extract structured nutrition facts from OCR text taken from a photo of a \
-            US-style Nutrition Facts label. Only use values explicitly present in the text. \
-            If a value is missing, use 0. Do not guess or estimate.
+            nutrition label. The label may be a single-column US-style Nutrition Facts panel, \
+            or a table with multiple value columns (for example "Per 100g", "Per 40g serving", \
+            "Reference Intake"), where each row of the OCR text is one nutrient with its column \
+            values separated by " | " in left-to-right order matching the column headers.
+
+            If the table has both a "per 100g" (or "per 100ml") column and a "per serving" \
+            column, always use the per-serving column's values, and set the serving size to \
+            that column's header (e.g. "40g serving"). Never combine values from different \
+            columns or different rows — each number belongs to exactly one nutrient in exactly \
+            one column. Only use values explicitly present in the text. If a value is missing, \
+            use 0. Do not guess or estimate.
             """)
 
         let response = try await session.respond(
-            to: "OCR text:\n\(ocrText)",
+            to: "OCR text (rows top-to-bottom, columns left-to-right separated by \" | \"):\n\(ocrText)",
             generating: ExtractedNutritionLabel.self
         )
         return response.content

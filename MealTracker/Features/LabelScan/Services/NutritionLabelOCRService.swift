@@ -18,8 +18,17 @@ enum NutritionLabelOCRService {
         }
     }
 
-    /// Runs Vision text recognition off the calling actor and returns the recognized lines,
-    /// roughly top-to-bottom as they appear on the label.
+    private struct Fragment {
+        let text: String
+        let midY: CGFloat
+        let minX: CGFloat
+        let height: CGFloat
+    }
+
+    /// Runs Vision text recognition off the calling actor and reconstructs rows/columns from
+    /// each fragment's position. A naive top-to-bottom text dump scrambles multi-column UK/EU
+    /// style labels (e.g. "Per 100g" / "Per 40g serving" side by side) since Vision returns each
+    /// fragment as an independent observation with no column awareness of its own.
     static func recognizeText(in image: UIImage) async throws -> String {
         guard let cgImage = image.cgImage else {
             throw OCRError.invalidImage
@@ -35,8 +44,34 @@ enum NutritionLabelOCRService {
             try handler.perform([request])
 
             let observations = request.results ?? []
-            let sorted = observations.sorted { $0.boundingBox.origin.y > $1.boundingBox.origin.y }
-            return sorted.compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
+            let fragments: [Fragment] = observations.compactMap { observation in
+                guard let text = observation.topCandidates(1).first?.string else { return nil }
+                let box = observation.boundingBox
+                return Fragment(text: text, midY: box.midY, minX: box.minX, height: box.height)
+            }
+
+            return Self.assembleRows(from: fragments)
         }.value
+    }
+
+    /// Clusters fragments into rows by vertical overlap (within ~60% of a fragment's own height),
+    /// then orders each row left-to-right so values stay grouped with their column header.
+    private static func assembleRows(from fragments: [Fragment]) -> String {
+        let sorted = fragments.sorted { $0.midY > $1.midY }
+
+        var rows: [[Fragment]] = []
+        for fragment in sorted {
+            if let lastIndex = rows.indices.last,
+               let reference = rows[lastIndex].first,
+               abs(fragment.midY - reference.midY) <= reference.height * 0.6 {
+                rows[lastIndex].append(fragment)
+            } else {
+                rows.append([fragment])
+            }
+        }
+
+        return rows
+            .map { row in row.sorted { $0.minX < $1.minX }.map(\.text).joined(separator: " | ") }
+            .joined(separator: "\n")
     }
 }
