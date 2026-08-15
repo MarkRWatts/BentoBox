@@ -73,9 +73,13 @@ enum NutritionLabelExtractor {
             "Reference Intake"), where each row of the OCR text is one nutrient with its column \
             values separated by " | " in left-to-right order matching the column headers.
 
-            If the table has both a "per 100g" (or "per 100ml") column and a "per serving" \
-            column, always use the per-serving column's values, and set the serving size to \
-            that column's header (e.g. "40g serving"). Never combine values from different \
+            UK/EU labels typically have a "per 100g" (or "per 100ml") column and a "per serving" \
+            column — always use the per-serving column's values, and set the serving size to \
+            that column's header (e.g. "40g serving"). They sometimes also have a third \
+            "Reference Intake" / "%RI" / "RI*" column — ignore that column entirely, it does not \
+            describe this food. Identify each column by its own header text in the header row, \
+            never by position: the per-100g and per-serving columns are not always in the same \
+            left-to-right order from one label to another. Never combine values from different \
             columns or different rows — each number belongs to exactly one nutrient in exactly \
             one column.
 
