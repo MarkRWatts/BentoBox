@@ -1,0 +1,62 @@
+name: MealTracker
+options:
+  bundleIdPrefix: com.markwatts
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    TARGETED_DEVICE_FAMILY: "1"
+    SWIFT_STRICT_CONCURRENCY: complete
+    ENABLE_PREVIEWS: YES
+    IPHONEOS_DEPLOYMENT_TARGET: "26.0"
+
+targets:
+  MealTracker:
+    type: application
+    platform: iOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: MealTracker
+    info:
+      path: Generated/MealTracker-Info.plist
+      properties:
+        CFBundleDisplayName: MealTracker
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+        NSCameraUsageDescription: "MealTracker uses your camera to scan barcodes and nutrition labels."
+        NSHealthShareUsageDescription: "MealTracker reads your steps and active energy to personalize your daily calorie budget, and reads your weight history to show trends."
+        NSHealthUpdateUsageDescription: "MealTracker writes the food and weight you log so it's available in the Health app."
+    entitlements:
+      path: Generated/MealTracker.entitlements
+      properties:
+        com.apple.developer.healthkit: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.markwatts.MealTracker
+        PRODUCT_NAME: MealTracker
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "1"
+    scheme:
+      testTargets:
+        - MealTrackerTests
+      gatherCoverageData: false
+
+  MealTrackerTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: MealTrackerTests
+    dependencies:
+      - target: MealTracker
+    settings:
+      base:
+        SWIFT_VERSION: "6.0"
+        PRODUCT_BUNDLE_IDENTIFIER: com.markwatts.MealTrackerTests
