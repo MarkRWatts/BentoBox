@@ -55,11 +55,11 @@ struct LabelExtractionReviewView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             viewModel.name = extracted.productName
-            viewModel.servingSizeDescription = extracted.servingSizeDescription.isEmpty ? "1 serving" : extracted.servingSizeDescription
-            viewModel.calories = extracted.calories
-            viewModel.proteinGrams = extracted.proteinGrams
-            viewModel.carbGrams = extracted.carbGrams
-            viewModel.fatGrams = extracted.fatGrams
+            viewModel.servingSizeDescription = extracted.resolvedServingSizeDescription
+            viewModel.calories = extracted.resolvedCalories
+            viewModel.proteinGrams = extracted.resolvedProteinGrams
+            viewModel.carbGrams = extracted.resolvedCarbGrams
+            viewModel.fatGrams = extracted.resolvedFatGrams
             viewModel.source = .labelScan
         }
     }
