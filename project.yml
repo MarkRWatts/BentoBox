@@ -13,6 +13,7 @@ settings:
     SWIFT_STRICT_CONCURRENCY: complete
     ENABLE_PREVIEWS: YES
     IPHONEOS_DEPLOYMENT_TARGET: "26.0"
+    DEVELOPMENT_TEAM: "3PYHQMS6G6"
 
 targets:
   MealTracker:
