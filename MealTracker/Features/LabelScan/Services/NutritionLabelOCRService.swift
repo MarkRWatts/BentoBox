@@ -18,7 +18,7 @@ enum NutritionLabelOCRService {
         }
     }
 
-    private struct Fragment {
+    struct Fragment {
         let text: String
         let minX: CGFloat
         let midY: CGFloat
@@ -62,7 +62,7 @@ enum NutritionLabelOCRService {
     /// starting a new one. Each row is then ordered left-to-right so values stay grouped with
     /// their column header, and a wrapped value naturally lands right next to its sibling since
     /// both occupy the same column position.
-    private static func assembleRows(from fragments: [Fragment]) -> String {
+    static func assembleRows(from fragments: [Fragment]) -> String {
         guard !fragments.isEmpty else { return "" }
 
         let sorted = fragments.sorted { $0.midY > $1.midY }
@@ -81,10 +81,23 @@ enum NutritionLabelOCRService {
         }
 
         let labelMarginX = lines.compactMap(\.first).map(\.minX).min() ?? 0
+        let linesNearMargin = lines.filter { ($0.first?.minX ?? 0) <= labelMarginX + 0.08 }.count
+
+        // If the label column got cut off (e.g. by an over-tight crop), the remaining numeric
+        // columns still share a rough left edge of their own, so a couple of lines can land
+        // "near the margin" by pure coincidence even with no real row-name text anywhere — a low
+        // bar here still let contamination through in testing. Require a genuine majority before
+        // trusting the merge signal; merging under a false positive doesn't just fold wrapped
+        // continuation lines, it collapses unrelated rows into one contaminated blob (real
+        // failure seen on-device: Sugar's value ending up in the Carbs field, Salt's in Saturated
+        // Fat). Otherwise keep every visual line as its own row.
+        let requiredMarginLines = max(2, Int((Double(lines.count) * 0.6).rounded(.up)))
+        let shouldMergeWrappedLines = linesNearMargin >= requiredMarginLines
+
         var rows: [[Fragment]] = []
         for line in lines {
             let startsNearLabelMargin = (line.first?.minX ?? 0) <= labelMarginX + 0.08
-            if !startsNearLabelMargin, let lastIndex = rows.indices.last {
+            if shouldMergeWrappedLines, !startsNearLabelMargin, let lastIndex = rows.indices.last {
                 rows[lastIndex].append(contentsOf: line)
             } else {
                 rows.append(line)

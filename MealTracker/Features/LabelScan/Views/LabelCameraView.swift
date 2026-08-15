@@ -1,5 +1,5 @@
 import SwiftUI
-import AVFoundation
+@preconcurrency import AVFoundation
 
 /// A minimal custom camera (rather than UIImagePickerController, which doesn't support overlays
 /// well) so we can draw a guide rectangle over the live preview and crop the captured photo to
@@ -15,9 +15,11 @@ struct LabelCameraView: View {
     @State private var isCapturing = false
 
     /// Nutrition tables are usually taller than wide, so the guide is a portrait rectangle
-    /// covering most of the screen width.
+    /// covering most of the screen width — but not too narrow, since a user cutting the
+    /// left-hand nutrient-label column out of frame breaks row reconstruction entirely (that
+    /// column is what tells it where each new row starts).
     private let guideWidthFraction: CGFloat = 0.85
-    private let guideAspectRatio: CGFloat = 0.72 // width / height
+    private let guideAspectRatio: CGFloat = 0.85 // width / height
 
     var body: some View {
         GeometryReader { geometry in
@@ -70,7 +72,11 @@ struct LabelCameraView: View {
     private func capture(screenSize: CGSize) {
         guard !isCapturing else { return }
         isCapturing = true
-        let guide = guideRect(in: screenSize)
+        // Crop a bit more generously than the visual guide — real-world framing is rarely
+        // pixel-perfect, and cutting off part of a row (especially the left-hand nutrient-label
+        // column row reconstruction depends on) loses that data outright, which is worse than
+        // including a little extra margin around the table for the model to ignore.
+        let guide = guideRect(in: screenSize).insetBy(dx: -screenSize.width * 0.06, dy: -screenSize.height * 0.03)
         Task {
             let image = await controller.capturePhoto()
             isCapturing = false

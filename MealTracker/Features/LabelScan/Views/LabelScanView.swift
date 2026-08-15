@@ -60,30 +60,48 @@ struct LabelScanView: View {
 
     @ViewBuilder
     private var idleContent: some View {
-        if isCameraAvailable {
-            LabelCameraView { image in
-                Task { await viewModel.process(image: image) }
-            }
-            .ignoresSafeArea()
-        } else {
-            // No camera (e.g. Simulator) — fall back to picking an existing photo.
-            VStack(spacing: 16) {
-                Image(systemName: "text.viewfinder")
-                    .font(.system(size: 48))
-                    .foregroundStyle(.secondary)
-                Text("Choose a photo of a nutrition label")
-                    .foregroundStyle(.secondary)
-                PhotosPicker("Choose Photo", selection: $photosPickerItem, matching: .images)
-                    .buttonStyle(.glass)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .onChange(of: photosPickerItem) { _, newItem in
-                Task {
-                    guard let newItem,
-                          let data = try? await newItem.loadTransferable(type: Data.self),
-                          let image = UIImage(data: data) else { return }
-                    await viewModel.process(image: image)
+        Group {
+            if isCameraAvailable {
+                ZStack(alignment: .bottomLeading) {
+                    LabelCameraView { image in
+                        Task { await viewModel.process(image: image) }
+                    }
+                    .ignoresSafeArea()
+
+                    // A photo-library shortcut alongside the shutter — not just a no-camera
+                    // fallback. Re-picking the same saved reference photo each time (rather than
+                    // re-photographing the label) is what makes extraction fixes actually
+                    // comparable against each other, run to run.
+                    PhotosPicker(selection: $photosPickerItem, matching: .images) {
+                        Image(systemName: "photo.on.rectangle")
+                            .font(.system(size: 20))
+                            .foregroundStyle(.white)
+                            .frame(width: 44, height: 44)
+                            .background(.ultraThinMaterial, in: Circle())
+                    }
+                    .padding(.leading, 24)
+                    .padding(.bottom, 48)
                 }
+            } else {
+                // No camera (e.g. Simulator) — fall back to picking an existing photo.
+                VStack(spacing: 16) {
+                    Image(systemName: "text.viewfinder")
+                        .font(.system(size: 48))
+                        .foregroundStyle(.secondary)
+                    Text("Choose a photo of a nutrition label")
+                        .foregroundStyle(.secondary)
+                    PhotosPicker("Choose Photo", selection: $photosPickerItem, matching: .images)
+                        .buttonStyle(.glass)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .onChange(of: photosPickerItem) { _, newItem in
+            Task {
+                guard let newItem,
+                      let data = try? await newItem.loadTransferable(type: Data.self),
+                      let image = UIImage(data: data) else { return }
+                await viewModel.process(image: image)
             }
         }
     }
