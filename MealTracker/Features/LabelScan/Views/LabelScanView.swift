@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import PhotosUI
+import AVFoundation
 
 struct LabelScanView: View {
     let mealSlot: MealSlotConfig
@@ -11,7 +12,7 @@ struct LabelScanView: View {
     @State private var isPresentingManualEntry = false
 
     private var isCameraAvailable: Bool {
-        UIImagePickerController.isSourceTypeAvailable(.camera)
+        AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) != nil
     }
 
     var body: some View {
@@ -60,12 +61,9 @@ struct LabelScanView: View {
     @ViewBuilder
     private var idleContent: some View {
         if isCameraAvailable {
-            CameraCaptureView(
-                onCapture: { image in
-                    Task { await viewModel.process(image: image) }
-                },
-                onCancel: { dismiss() }
-            )
+            LabelCameraView { image in
+                Task { await viewModel.process(image: image) }
+            }
             .ignoresSafeArea()
         } else {
             // No camera (e.g. Simulator) — fall back to picking an existing photo.
