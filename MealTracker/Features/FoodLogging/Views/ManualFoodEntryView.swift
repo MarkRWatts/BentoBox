@@ -23,7 +23,11 @@ struct ManualFoodEntryView: View {
                     NutritionField(title: "Calories", value: $viewModel.calories)
                     NutritionField(title: "Protein (g)", value: $viewModel.proteinGrams)
                     NutritionField(title: "Carbs (g)", value: $viewModel.carbGrams)
+                    NutritionField(title: "Sugar (g)", value: $viewModel.sugarGrams)
+                    NutritionField(title: "Fiber (g)", value: $viewModel.fiberGrams)
                     NutritionField(title: "Fat (g)", value: $viewModel.fatGrams)
+                    NutritionField(title: "Saturated Fat (g)", value: $viewModel.saturatedFatGrams)
+                    NutritionField(title: "Sodium (mg)", value: $viewModel.sodiumMg)
                 }
 
                 Section("Quantity") {

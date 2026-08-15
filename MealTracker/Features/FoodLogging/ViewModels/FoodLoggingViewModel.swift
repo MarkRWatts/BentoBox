@@ -12,6 +12,10 @@ final class FoodLoggingViewModel {
     var proteinGrams: Double = 0
     var carbGrams: Double = 0
     var fatGrams: Double = 0
+    var saturatedFatGrams: Double = 0
+    var fiberGrams: Double = 0
+    var sugarGrams: Double = 0
+    var sodiumMg: Double = 0
     var quantity: Double = 1
     /// Set when this entry originates from a barcode scan that had no Open Food Facts match,
     /// so the manually-entered nutrition still gets cached against that barcode for next time.
@@ -33,6 +37,10 @@ final class FoodLoggingViewModel {
             proteinGramsPerServing: proteinGrams,
             carbGramsPerServing: carbGrams,
             fatGramsPerServing: fatGrams,
+            saturatedFatGramsPerServing: saturatedFatGrams,
+            fiberGramsPerServing: fiberGrams,
+            sugarGramsPerServing: sugarGrams,
+            sodiumMgPerServing: sodiumMg,
             source: source
         )
         context.insert(foodItem)

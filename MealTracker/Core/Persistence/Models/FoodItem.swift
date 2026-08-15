@@ -15,6 +15,7 @@ final class FoodItem {
     var proteinGramsPerServing: Double = 0
     var carbGramsPerServing: Double = 0
     var fatGramsPerServing: Double = 0
+    var saturatedFatGramsPerServing: Double?
     var fiberGramsPerServing: Double?
     var sugarGramsPerServing: Double?
     var sodiumMgPerServing: Double?
@@ -35,6 +36,7 @@ final class FoodItem {
         proteinGramsPerServing: Double,
         carbGramsPerServing: Double,
         fatGramsPerServing: Double,
+        saturatedFatGramsPerServing: Double? = nil,
         fiberGramsPerServing: Double? = nil,
         sugarGramsPerServing: Double? = nil,
         sodiumMgPerServing: Double? = nil,
@@ -50,6 +52,7 @@ final class FoodItem {
         self.proteinGramsPerServing = proteinGramsPerServing
         self.carbGramsPerServing = carbGramsPerServing
         self.fatGramsPerServing = fatGramsPerServing
+        self.saturatedFatGramsPerServing = saturatedFatGramsPerServing
         self.fiberGramsPerServing = fiberGramsPerServing
         self.sugarGramsPerServing = sugarGramsPerServing
         self.sodiumMgPerServing = sodiumMgPerServing

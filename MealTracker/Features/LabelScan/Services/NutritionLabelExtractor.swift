@@ -9,8 +9,14 @@ struct ExtractedNutritionLabel {
     var servingSizeDescription: String
     var calories: Double
     var fatGrams: Double
+    var saturatedFatGrams: Double
     var carbGrams: Double
+    var sugarGrams: Double
+    var fiberGrams: Double
     var proteinGrams: Double
+    /// Sodium in mg, converted from the label's Salt figure (UK/EU labels report salt, not
+    /// sodium — see NutritionLabelExtractor.sodiumMg(fromSaltGrams:)).
+    var sodiumMg: Double
     var confidence: Double
 }
 
@@ -20,6 +26,10 @@ struct ExtractedNutritionLabel {
 /// between unrelated nutrients — e.g. Salt's value landing in the Protein field). Copying a
 /// short span of text it can already see, unmodified, is a much easier and more reliable task
 /// for a small on-device model than re-typing numbers into a battery of separate fields.
+///
+/// The row set mirrors the standard UK/EU nutrition table (Energy, Fat, of which Saturates,
+/// Carbohydrate, of which Sugars, Fibre, Protein, Salt) mandated by EU food labeling
+/// regulation — real-world labels have consistently shown exactly this row set.
 @Generable
 struct NutritionLabelRowSelection {
     @Guide(description: "Product or food name if visible in the text, else empty string")
@@ -34,11 +44,23 @@ struct NutritionLabelRowSelection {
     @Guide(description: "The row for total Fat — not the 'of which saturates' sub-row beneath it — copied character-for-character exactly as it appears in the OCR text. Empty string if there is no fat row")
     var fatRow: String
 
+    @Guide(description: "The 'of which saturates' (or 'Saturated Fat') sub-row beneath the Fat row, copied character-for-character exactly as it appears in the OCR text. Empty string if there is no such row")
+    var saturatesRow: String
+
     @Guide(description: "The row for total Carbohydrate — not the 'of which sugars' sub-row beneath it — copied character-for-character exactly as it appears in the OCR text. Empty string if there is no carbohydrate row")
     var carbRow: String
 
+    @Guide(description: "The 'of which sugars' (or 'Sugars') sub-row beneath the Carbohydrate row, copied character-for-character exactly as it appears in the OCR text. Empty string if there is no such row")
+    var sugarsRow: String
+
+    @Guide(description: "The row for Fibre/Fiber, copied character-for-character exactly as it appears in the OCR text. Empty string if there is no such row")
+    var fibreRow: String
+
     @Guide(description: "The row for Protein, copied character-for-character exactly as it appears in the OCR text. Empty string if there is no protein row")
     var proteinRow: String
+
+    @Guide(description: "The nutrition table's own Salt row (grams), copied character-for-character exactly as it appears in the OCR text — not an incidental mention of 'salt' in an ingredients list. Empty string if there is no such row")
+    var saltRow: String
 
     @Guide(description: "Confidence from 0 to 1 that the rows above were correctly identified")
     var confidence: Double
@@ -86,9 +108,15 @@ enum NutritionLabelExtractor {
             - The header row that names the value columns (e.g. "Typical Values | Per 100g | \
             Per 40g serving")
             - The Energy row (kJ/kcal)
-            - The total Fat row — not its "of which saturates" sub-row
-            - The total Carbohydrate row — not its "of which sugars" sub-row
+            - The total Fat row, and separately its "of which saturates" sub-row
+            - The total Carbohydrate row, and separately its "of which sugars" sub-row
+            - The Fibre row
             - The Protein row
+            - The Salt row from the nutrition table specifically — not the word "salt" if it \
+            happens to appear in an ingredients list elsewhere in the text
+
+            A parent row ("Fat", "Carbohydrate") and its "of which" sub-row are always two \
+            different rows — never copy the same row text into both fields.
 
             If a label has a third "Reference Intake" / "%RI" / "RI*" column, leave it in place \
             when you copy each row — it will be handled separately, you don't need to remove it.
@@ -112,15 +140,32 @@ enum NutritionLabelExtractor {
         let columns = dataColumnHeaders(from: selection.headerRow)
         let index = preferredColumnIndex(in: columns)
 
+        func grams(in row: String) -> Double {
+            numbers(matching: #"([\d.]+)\s*g"#, in: row)[safe: index] ?? 0
+        }
+
+        let saltGrams = numbers(matching: #"([\d.]+)\s*g"#, in: selection.saltRow)[safe: index] ?? 0
+
         return ExtractedNutritionLabel(
             productName: selection.productName,
             servingSizeDescription: columns[safe: index] ?? "1 serving",
             calories: numbers(matching: #"([\d.]+)\s*kcal"#, in: selection.energyRow)[safe: index] ?? 0,
-            fatGrams: numbers(matching: #"([\d.]+)\s*g"#, in: selection.fatRow)[safe: index] ?? 0,
-            carbGrams: numbers(matching: #"([\d.]+)\s*g"#, in: selection.carbRow)[safe: index] ?? 0,
-            proteinGrams: numbers(matching: #"([\d.]+)\s*g"#, in: selection.proteinRow)[safe: index] ?? 0,
+            fatGrams: grams(in: selection.fatRow),
+            saturatedFatGrams: grams(in: selection.saturatesRow),
+            carbGrams: grams(in: selection.carbRow),
+            sugarGrams: grams(in: selection.sugarsRow),
+            fiberGrams: grams(in: selection.fibreRow),
+            proteinGrams: grams(in: selection.proteinRow),
+            sodiumMg: sodiumMg(fromSaltGrams: saltGrams),
             confidence: selection.confidence
         )
+    }
+
+    /// UK/EU labels report Salt, not Sodium. The standard regulatory conversion (used by the UK
+    /// Food Standards Agency and EU food law) is sodium = salt ÷ 2.5 by mass, i.e. for salt in
+    /// grams, sodium in mg = salt(g) × 1000 ÷ 2.5 = salt(g) × 400.
+    static func sodiumMg(fromSaltGrams saltGrams: Double) -> Double {
+        saltGrams * 400
     }
 
     /// The value-column headers from a row like "Typical Values | Per 100g | Per 40g serving".

@@ -33,7 +33,11 @@ struct LabelExtractionReviewView: View {
                 NutritionField(title: "Calories", value: $viewModel.calories)
                 NutritionField(title: "Protein (g)", value: $viewModel.proteinGrams)
                 NutritionField(title: "Carbs (g)", value: $viewModel.carbGrams)
+                NutritionField(title: "Sugar (g)", value: $viewModel.sugarGrams)
+                NutritionField(title: "Fiber (g)", value: $viewModel.fiberGrams)
                 NutritionField(title: "Fat (g)", value: $viewModel.fatGrams)
+                NutritionField(title: "Saturated Fat (g)", value: $viewModel.saturatedFatGrams)
+                NutritionField(title: "Sodium (mg)", value: $viewModel.sodiumMg)
             }
 
             Section("Quantity") {
@@ -59,7 +63,11 @@ struct LabelExtractionReviewView: View {
             viewModel.calories = extracted.calories
             viewModel.proteinGrams = extracted.proteinGrams
             viewModel.carbGrams = extracted.carbGrams
+            viewModel.sugarGrams = extracted.sugarGrams
+            viewModel.fiberGrams = extracted.fiberGrams
             viewModel.fatGrams = extracted.fatGrams
+            viewModel.saturatedFatGrams = extracted.saturatedFatGrams
+            viewModel.sodiumMg = extracted.sodiumMg
             viewModel.source = .labelScan
         }
     }

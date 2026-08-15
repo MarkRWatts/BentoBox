@@ -30,14 +30,24 @@ struct NutritionLabelExtractorParsingTests {
         #expect(NutritionLabelExtractor.numbers(matching: #"([\d.]+)\s*g"#, in: "Fat | 2.2g | 0.9g | 10%") == [2.2, 0.9])
     }
 
+    @Test func sodiumMgConvertsFromSaltGramsUsingStandardFactor() {
+        // UK Food Standards Agency / EU convention: sodium(mg) = salt(g) * 400
+        #expect(NutritionLabelExtractor.sodiumMg(fromSaltGrams: 0.61) == 244)
+        #expect(NutritionLabelExtractor.sodiumMg(fromSaltGrams: 0) == 0)
+    }
+
     @Test func resolveEndToEndPicksServingColumnAcrossAllFields() {
         let selection = NutritionLabelRowSelection(
             productName: "Shreddies",
             headerRow: "Typical Values | Per 100g | Per 40g serving",
             energyRow: "Energy | 1549kJ | 366kcal | 620kJ | 146kcal",
             fatRow: "Fat | 2.2g | 0.9g",
+            saturatesRow: "of which saturates | 0.7g | 0.3g",
             carbRow: "Carbohydrate | 71.4g | 28.6g",
+            sugarsRow: "of which sugars | 22.2g | 8.9g",
+            fibreRow: "Fibre | 11.1g | 4.4g",
             proteinRow: "Protein | 9.7g | 3.9g",
+            saltRow: "Salt | 0.61g | 0.24g",
             confidence: 0.9
         )
 
@@ -45,18 +55,26 @@ struct NutritionLabelExtractorParsingTests {
         #expect(result.servingSizeDescription == "Per 40g serving")
         #expect(result.calories == 146)
         #expect(result.fatGrams == 0.9)
+        #expect(result.saturatedFatGrams == 0.3)
         #expect(result.carbGrams == 28.6)
+        #expect(result.sugarGrams == 8.9)
+        #expect(result.fiberGrams == 4.4)
         #expect(result.proteinGrams == 3.9)
+        #expect(result.sodiumMg == 96) // 0.24g salt * 400
     }
 
-    @Test func resolveHandlesSingleColumnUSLabel() {
+    @Test func resolveHandlesSingleColumnLabelWithMissingOptionalRows() {
         let selection = NutritionLabelRowSelection(
             productName: "Peanut Butter",
             headerRow: "Amount Per Serving | 1 cup (240g)",
             energyRow: "Calories | 190kcal",
             fatRow: "Total Fat | 16g",
+            saturatesRow: "",
             carbRow: "Total Carbohydrate | 6g",
+            sugarsRow: "",
+            fibreRow: "",
             proteinRow: "Protein | 7g",
+            saltRow: "",
             confidence: 0.9
         )
 
@@ -64,5 +82,7 @@ struct NutritionLabelExtractorParsingTests {
         #expect(result.servingSizeDescription == "1 cup (240g)")
         #expect(result.calories == 190)
         #expect(result.fatGrams == 16)
+        #expect(result.saturatedFatGrams == 0)
+        #expect(result.sodiumMg == 0)
     }
 }
