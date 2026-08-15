@@ -21,6 +21,21 @@ struct NutritionLabelExtractorParsingTests {
         #expect(NutritionLabelExtractor.preferredColumnIndex(in: []) == 0)
     }
 
+    @Test func preferredColumnIndexIgnoresUnfilteredReferenceIntakeFragment() {
+        // Real-device failure: "Reference Intake" split across OCR lines into two separate
+        // fragments ("Reference", "Intake") slipped past the combined-phrase RI filter and, since
+        // neither fragment looks like "100g", outranked the real serving column by appearing
+        // first and matching the old (too-permissive) "isn't per-100g" heuristic.
+        #expect(NutritionLabelExtractor.preferredColumnIndex(in: ["Per 100g", "Reference", "Per 40g serving"]) == 2)
+        #expect(NutritionLabelExtractor.preferredColumnIndex(in: ["Reference", "Intake", "Per 100g", "Per 40g serving"]) == 3)
+    }
+
+    @Test func dataColumnHeadersFiltersSplitReferenceIntakeFragments() {
+        let headerRow = "Typical Values | Per 100g | Per 40g serving | Reference | Intake"
+        let columns = NutritionLabelExtractor.dataColumnHeaders(from: headerRow)
+        #expect(columns == ["Per 100g", "Per 40g serving"])
+    }
+
     @Test func numbersExtractsOnlyKcalIgnoringKJ() {
         #expect(NutritionLabelExtractor.numbers(matching: #"([\d.]+)\s*kcal"#, in: "1549kJ | 366kcal | 620kJ | 146kcal") == [366, 146])
         #expect(NutritionLabelExtractor.numbers(matching: #"([\d.]+)\s*kcal"#, in: "764kJ/181kcal") == [181])

@@ -107,7 +107,8 @@ enum NutritionLabelExtractor {
             in the OCR text — do not reformat, reorder, retype the numbers, or fix anything:
             - The header row that names the value columns (e.g. "Typical Values | Per 100g | \
             Per 40g serving")
-            - The Energy row (kJ/kcal)
+            - The Energy row (kJ/kcal) — this is a row inside the nutrition table itself, near \
+            the top, giving this food's own energy content
             - The total Fat row, and separately its "of which saturates" sub-row
             - The total Carbohydrate row, and separately its "of which sugars" sub-row
             - The Fibre row
@@ -117,6 +118,11 @@ enum NutritionLabelExtractor {
 
             A parent row ("Fat", "Carbohydrate") and its "of which" sub-row are always two \
             different rows — never copy the same row text into both fields.
+
+            Many labels also have a small-print footnote sentence near the bottom, something \
+            like "Reference intake of an average adult (8400kJ/2000kcal)" or similar wording — \
+            this just explains what "%RI" means in general and is never this food's own data. Do \
+            not use it as the Energy row, and do not copy any part of it into any field.
 
             If a label has a third "Reference Intake" / "%RI" / "RI*" column, leave it in place \
             when you copy each row — it will be handled separately, you don't need to remove it.
@@ -185,14 +191,36 @@ enum NutritionLabelExtractor {
     /// Prefers a per-serving column over a per-100g/per-100ml one, wherever it falls in the
     /// (already Reference-Intake-filtered) column list — this is correct regardless of which
     /// order the label itself puts the columns in, since it keys off header text, not position.
+    ///
+    /// Requires a *positive* signal that a candidate actually looks like a serving description
+    /// (contains a digit, or a word like "serving"/"portion"/"pack"), rather than just "isn't
+    /// per-100g" — real-device testing showed a stray, unfiltered Reference-Intake fragment (e.g.
+    /// "Reference" split from "Intake" across OCR lines) can otherwise outrank the genuine
+    /// serving column simply by appearing first and not matching the per-100g pattern either.
     static func preferredColumnIndex(in columns: [String]) -> Int {
         guard columns.count > 1 else { return 0 }
+        if let index = columns.firstIndex(where: looksLikeServingColumn) {
+            return index
+        }
         return columns.firstIndex { !looksLikePer100($0) } ?? 0
     }
 
+    private static func looksLikeServingColumn(_ header: String) -> Bool {
+        guard !looksLikePer100(header), !looksLikeReferenceIntake(header) else { return false }
+        let normalized = header.lowercased()
+        return normalized.contains("serving") || normalized.contains("portion") || normalized.contains("pack")
+            || normalized.contains(where: \.isNumber)
+    }
+
+    /// Reference Intake / %RI header text sometimes lands as two separate fragments — e.g.
+    /// "Reference" and "Intake" on their own — rather than one combined "Reference Intake"
+    /// segment, so an exact-token match is checked in addition to the combined phrase.
     private static func looksLikeReferenceIntake(_ header: String) -> Bool {
         let normalized = header.lowercased().replacingOccurrences(of: " ", with: "")
-        return normalized.contains("referenceintake") || normalized.contains("%ri") || normalized.contains("ri*")
+        if normalized.contains("referenceintake") || normalized.contains("%ri") || normalized.contains("ri*") {
+            return true
+        }
+        return ["reference", "intake", "ri"].contains(normalized)
     }
 
     private static func looksLikePer100(_ header: String) -> Bool {
