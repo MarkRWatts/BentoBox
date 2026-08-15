@@ -144,15 +144,47 @@ final class LabelCameraController: NSObject, @unchecked Sendable {
         defer { session.commitConfiguration() }
         session.sessionPreset = .photo
 
-        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
+        guard let device = Self.bestAvailableCaptureDevice(),
               let input = try? AVCaptureDeviceInput(device: device),
               session.canAddInput(input) else {
             return
         }
         session.addInput(input)
+        Self.enableContinuousAutoFocus(on: device)
 
         if session.canAddOutput(output) {
             session.addOutput(output)
+        }
+    }
+
+    /// A single-lens `.builtInWideAngleCamera` request never focuses closer than that lens's own
+    /// minimum distance, which is too far for a legible close-up shot of a nutrition label. The
+    /// stock Camera app's macro mode works by using a *virtual* multi-lens device instead — it
+    /// then switches to the ultra-wide lens automatically as the subject gets close, the same way
+    /// requesting these device types gets us that behavior for free, with no separate macro flag.
+    /// Falls back one tier at a time to whatever the hardware actually has.
+    private static func bestAvailableCaptureDevice() -> AVCaptureDevice? {
+        let deviceTypes: [AVCaptureDevice.DeviceType] = [
+            .builtInTripleCamera,
+            .builtInDualWideCamera,
+            .builtInWideAngleCamera
+        ]
+        for deviceType in deviceTypes {
+            if let device = AVCaptureDevice.default(deviceType, for: .video, position: .back) {
+                return device
+            }
+        }
+        return nil
+    }
+
+    private static func enableContinuousAutoFocus(on device: AVCaptureDevice) {
+        guard device.isFocusModeSupported(.continuousAutoFocus) else { return }
+        do {
+            try device.lockForConfiguration()
+            device.focusMode = .continuousAutoFocus
+            device.unlockForConfiguration()
+        } catch {
+            // Non-fatal — the device just keeps whatever focus mode it already had.
         }
     }
 
