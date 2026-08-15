@@ -83,11 +83,13 @@ enum NutritionLabelExtractor {
             columns or different rows — each number belongs to exactly one nutrient in exactly \
             one column.
 
-            The energy row is often given in two units, kJ and kcal, one immediately after the \
-            other within the same column (e.g. "1549kJ | 366kcal" both belong to the same "per \
-            100g" column). Use the kcal figure for calories, never the kJ figure — kJ values are \
-            roughly 4x the kcal value for the same serving, so if your calories figure looks \
-            about 4x too high, you likely picked the kJ number by mistake.
+            The energy row is often given in two units, kJ and kcal, both belonging to the same \
+            column. This can appear as two separate values in a row (e.g. "1549kJ | 366kcal"), \
+            or as a single combined token joined with a slash (e.g. "764kJ/181kcal" — here the \
+            first number before the slash is kJ, the second after it is kcal). Use the kcal \
+            figure for calories, never the kJ figure — kJ values are roughly 4x the kcal value \
+            for the same serving, so if your calories figure looks about 4x too high, you likely \
+            picked the kJ number by mistake.
 
             Only use values explicitly present in the text. If a value is missing, use 0. Do not \
             guess or estimate.
