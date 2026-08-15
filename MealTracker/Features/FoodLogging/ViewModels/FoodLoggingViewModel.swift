@@ -16,6 +16,8 @@ final class FoodLoggingViewModel {
     /// Set when this entry originates from a barcode scan that had no Open Food Facts match,
     /// so the manually-entered nutrition still gets cached against that barcode for next time.
     var barcode: String?
+    /// .manual unless this entry originated from label-scan extraction.
+    var source: FoodSource = .manual
 
     var isValid: Bool {
         !name.trimmingCharacters(in: .whitespaces).isEmpty && calories >= 0
@@ -31,7 +33,7 @@ final class FoodLoggingViewModel {
             proteinGramsPerServing: proteinGrams,
             carbGramsPerServing: carbGrams,
             fatGramsPerServing: fatGrams,
-            source: .manual
+            source: source
         )
         context.insert(foodItem)
 

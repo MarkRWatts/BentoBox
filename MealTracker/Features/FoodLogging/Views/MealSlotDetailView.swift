@@ -7,6 +7,7 @@ struct MealSlotDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var isPresentingAddFood = false
     @State private var isPresentingBarcodeScan = false
+    @State private var isPresentingLabelScan = false
 
     init(mealSlot: MealSlotConfig) {
         self.mealSlot = mealSlot
@@ -54,6 +55,11 @@ struct MealSlotDetailView: View {
                         Label("Scan Barcode", systemImage: "barcode.viewfinder")
                     }
                     Button {
+                        isPresentingLabelScan = true
+                    } label: {
+                        Label("Scan Nutrition Label", systemImage: "text.viewfinder")
+                    }
+                    Button {
                         isPresentingAddFood = true
                     } label: {
                         Label("Enter Manually", systemImage: "square.and.pencil")
@@ -68,6 +74,9 @@ struct MealSlotDetailView: View {
         }
         .sheet(isPresented: $isPresentingBarcodeScan) {
             BarcodeScanView(mealSlot: mealSlot)
+        }
+        .sheet(isPresented: $isPresentingLabelScan) {
+            LabelScanView(mealSlot: mealSlot)
         }
     }
 
