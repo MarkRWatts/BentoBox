@@ -9,7 +9,7 @@ struct ExtractedNutritionLabel {
     @Guide(description: "Serving size as written on the label, e.g. '1 cup (240g)' or '40g serving' if the label's per-serving column header gives it that way")
     var servingSizeDescription: String
 
-    @Guide(description: "Calories per serving")
+    @Guide(description: "Calories per serving, in kcal (Calories) — not the kJ (kilojoule) figure, if the label lists energy in both units")
     var calories: Double
 
     @Guide(description: "Total fat in grams per serving")
@@ -77,8 +77,16 @@ enum NutritionLabelExtractor {
             column, always use the per-serving column's values, and set the serving size to \
             that column's header (e.g. "40g serving"). Never combine values from different \
             columns or different rows — each number belongs to exactly one nutrient in exactly \
-            one column. Only use values explicitly present in the text. If a value is missing, \
-            use 0. Do not guess or estimate.
+            one column.
+
+            The energy row is often given in two units, kJ and kcal, one immediately after the \
+            other within the same column (e.g. "1549kJ | 366kcal" both belong to the same "per \
+            100g" column). Use the kcal figure for calories, never the kJ figure — kJ values are \
+            roughly 4x the kcal value for the same serving, so if your calories figure looks \
+            about 4x too high, you likely picked the kJ number by mistake.
+
+            Only use values explicitly present in the text. If a value is missing, use 0. Do not \
+            guess or estimate.
             """)
 
         let response = try await session.respond(
