@@ -10,6 +10,7 @@ struct LabelExtractionReviewView: View {
 
     @Environment(\.modelContext) private var modelContext
     @State private var viewModel = FoodLoggingViewModel()
+    @FocusState private var isNameFocused: Bool
 
     var body: some View {
         Form {
@@ -25,6 +26,7 @@ struct LabelExtractionReviewView: View {
 
             Section("Food") {
                 TextField("Name", text: $viewModel.name)
+                    .focused($isNameFocused)
                 TextField("Brand (optional)", text: $viewModel.brand)
                 TextField("Serving Size", text: $viewModel.servingSizeDescription)
             }
@@ -58,7 +60,6 @@ struct LabelExtractionReviewView: View {
         .navigationTitle("Review")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
-            viewModel.name = extracted.productName
             viewModel.servingSizeDescription = extracted.servingSizeDescription
             viewModel.calories = extracted.calories
             viewModel.proteinGrams = extracted.proteinGrams
@@ -69,6 +70,7 @@ struct LabelExtractionReviewView: View {
             viewModel.saturatedFatGrams = extracted.saturatedFatGrams
             viewModel.sodiumMg = extracted.sodiumMg
             viewModel.source = .labelScan
+            isNameFocused = true
         }
     }
 }

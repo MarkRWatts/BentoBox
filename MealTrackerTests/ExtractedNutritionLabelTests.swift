@@ -51,9 +51,33 @@ struct NutritionLabelExtractorParsingTests {
         #expect(NutritionLabelExtractor.sodiumMg(fromSaltGrams: 0) == 0)
     }
 
+    @Test func filterToNutritionRelevantLinesDropsIngredientsAndAllergenText() {
+        let ocrText = """
+        \u{2020} Shreddies is a source of Iron. Iron contributes...
+        May contain NUTS and PEANUTS.
+        \u{00b9}Rainforest Alliance Certified cocoa. Find out more at ra.c...
+        NUTRITION INFORMATION:
+        Typical Values | Per 100g | Per 40g serving
+        Energy | 1549kJ | 366kcal | 620kJ | 146kcal
+        Fat | 2.2g | 0.9g
+        Protein | 9.7g | 3.9g
+        """
+        let filtered = NutritionLabelExtractor.filterToNutritionRelevantLines(ocrText)
+
+        #expect(!filtered.contains("May contain NUTS"))
+        #expect(!filtered.contains("Rainforest Alliance"))
+        #expect(filtered.contains("Typical Values | Per 100g | Per 40g serving"))
+        #expect(filtered.contains("Energy | 1549kJ | 366kcal | 620kJ | 146kcal"))
+        #expect(filtered.contains("Protein | 9.7g | 3.9g"))
+    }
+
+    @Test func filterToNutritionRelevantLinesFallsBackToFullTextWhenNothingMatches() {
+        let ocrText = "Just some unrelated text with no numbers or keywords at all"
+        #expect(NutritionLabelExtractor.filterToNutritionRelevantLines(ocrText) == ocrText)
+    }
+
     @Test func resolveEndToEndPicksServingColumnAcrossAllFields() {
         let selection = NutritionLabelRowSelection(
-            productName: "Shreddies",
             headerRow: "Typical Values | Per 100g | Per 40g serving",
             energyRow: "Energy | 1549kJ | 366kcal | 620kJ | 146kcal",
             fatRow: "Fat | 2.2g | 0.9g",
@@ -80,7 +104,6 @@ struct NutritionLabelExtractorParsingTests {
 
     @Test func resolveHandlesSingleColumnLabelWithMissingOptionalRows() {
         let selection = NutritionLabelRowSelection(
-            productName: "Peanut Butter",
             headerRow: "Amount Per Serving | 1 cup (240g)",
             energyRow: "Calories | 190kcal",
             fatRow: "Total Fat | 16g",

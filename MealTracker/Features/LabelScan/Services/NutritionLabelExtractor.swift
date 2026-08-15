@@ -5,7 +5,6 @@ import FoundationModels
 /// column's numbers, since column selection and numeric parsing both happen in deterministic
 /// Swift code before this is constructed (see NutritionLabelExtractor).
 struct ExtractedNutritionLabel {
-    var productName: String
     var servingSizeDescription: String
     var calories: Double
     var fatGrams: Double
@@ -30,39 +29,41 @@ struct ExtractedNutritionLabel {
 /// The row set mirrors the standard UK/EU nutrition table (Energy, Fat, of which Saturates,
 /// Carbohydrate, of which Sugars, Fibre, Protein, Salt) mandated by EU food labeling
 /// regulation — real-world labels have consistently shown exactly this row set.
+///
+/// There's no productName field — real-device testing showed it just as unreliable as the
+/// numbers once were (it picked up an ingredient-certification blurb once), and unlike the
+/// numbers a wrong name is easy for the user to just retype, so it's not worth the extra prompt
+/// size or another point of failure.
 @Generable
 struct NutritionLabelRowSelection {
-    @Guide(description: "Product or food name if visible in the text, else empty string")
-    var productName: String
-
-    @Guide(description: "The header row naming the value columns, copied character-for-character exactly as it appears in the OCR text — do not reformat or reorder it")
+    @Guide(description: "Header row naming the value columns, copied exactly")
     var headerRow: String
 
-    @Guide(description: "The row for Energy (kJ/kcal), copied character-for-character exactly as it appears in the OCR text. Empty string if there is no energy row")
+    @Guide(description: "Energy (kJ/kcal) row, copied exactly — not the Reference Intake footnote")
     var energyRow: String
 
-    @Guide(description: "The row for total Fat — not the 'of which saturates' sub-row beneath it — copied character-for-character exactly as it appears in the OCR text. Empty string if there is no fat row")
+    @Guide(description: "Total Fat row, copied exactly — not its 'of which saturates' sub-row")
     var fatRow: String
 
-    @Guide(description: "The 'of which saturates' (or 'Saturated Fat') sub-row beneath the Fat row, copied character-for-character exactly as it appears in the OCR text. Empty string if there is no such row")
+    @Guide(description: "'Of which saturates' sub-row beneath Fat, copied exactly")
     var saturatesRow: String
 
-    @Guide(description: "The row for total Carbohydrate — not the 'of which sugars' sub-row beneath it — copied character-for-character exactly as it appears in the OCR text. Empty string if there is no carbohydrate row")
+    @Guide(description: "Total Carbohydrate row, copied exactly — not its 'of which sugars' sub-row")
     var carbRow: String
 
-    @Guide(description: "The 'of which sugars' (or 'Sugars') sub-row beneath the Carbohydrate row, copied character-for-character exactly as it appears in the OCR text. Empty string if there is no such row")
+    @Guide(description: "'Of which sugars' sub-row beneath Carbohydrate, copied exactly")
     var sugarsRow: String
 
-    @Guide(description: "The row for Fibre/Fiber, copied character-for-character exactly as it appears in the OCR text. Empty string if there is no such row")
+    @Guide(description: "Fibre row, copied exactly")
     var fibreRow: String
 
-    @Guide(description: "The row for Protein, copied character-for-character exactly as it appears in the OCR text. Empty string if there is no protein row")
+    @Guide(description: "Protein row, copied exactly")
     var proteinRow: String
 
-    @Guide(description: "The nutrition table's own Salt row (grams), copied character-for-character exactly as it appears in the OCR text — not an incidental mention of 'salt' in an ingredients list. Empty string if there is no such row")
+    @Guide(description: "Salt row from the nutrition table, copied exactly — not an ingredients-list mention of salt")
     var saltRow: String
 
-    @Guide(description: "Confidence from 0 to 1 that the rows above were correctly identified")
+    @Guide(description: "Confidence 0 to 1 that the rows above are correct")
     var confidence: Double
 }
 
@@ -98,41 +99,34 @@ enum NutritionLabelExtractor {
             throw ExtractionError.unavailable(message)
         }
 
+        let relevantText = filterToNutritionRelevantLines(ocrText)
+
         let session = LanguageModelSession(instructions: """
-            You are given OCR text from a photo of a nutrition label, laid out as rows \
-            top-to-bottom with each row's column values separated by " | " in left-to-right \
-            order matching the header row.
+            OCR text from a nutrition label, rows top-to-bottom, each row's column values \
+            separated by " | " left-to-right matching the header row.
 
-            Find these rows and copy each one out character-for-character exactly as it appears \
-            in the OCR text — do not reformat, reorder, retype the numbers, or fix anything:
-            - The header row that names the value columns (e.g. "Typical Values | Per 100g | \
-            Per 40g serving")
-            - The Energy row (kJ/kcal) — this is a row inside the nutrition table itself, near \
-            the top, giving this food's own energy content
-            - The total Fat row, and separately its "of which saturates" sub-row
-            - The total Carbohydrate row, and separately its "of which sugars" sub-row
-            - The Fibre row
-            - The Protein row
-            - The Salt row from the nutrition table specifically — not the word "salt" if it \
-            happens to appear in an ingredients list elsewhere in the text
+            Copy these rows out character-for-character exactly as they appear — no \
+            reformatting, reordering, retyping numbers, or fixing anything:
+            - Header row naming the value columns (e.g. "Typical Values | Per 100g | Per 40g \
+            serving")
+            - Energy row (kJ/kcal), from inside the table itself — not a small-print footnote \
+            like "Reference intake of an average adult (8400kJ/2000kcal)", which is never this \
+            food's own data
+            - Fat row, and separately its "of which saturates" sub-row — always two different \
+            rows, never copy one into both fields
+            - Carbohydrate row, and separately its "of which sugars" sub-row — same rule
+            - Fibre row
+            - Protein row
+            - Salt row from the table itself — not an incidental "salt" mention in an \
+            ingredients list
 
-            A parent row ("Fat", "Carbohydrate") and its "of which" sub-row are always two \
-            different rows — never copy the same row text into both fields.
-
-            Many labels also have a small-print footnote sentence near the bottom, something \
-            like "Reference intake of an average adult (8400kJ/2000kcal)" or similar wording — \
-            this just explains what "%RI" means in general and is never this food's own data. Do \
-            not use it as the Energy row, and do not copy any part of it into any field.
-
-            If a label has a third "Reference Intake" / "%RI" / "RI*" column, leave it in place \
-            when you copy each row — it will be handled separately, you don't need to remove it.
-
-            If any of these rows isn't present in the text, leave that field as an empty string. \
-            Do not invent a row that isn't there, and do not compute or guess any values.
+            Leave a third Reference Intake / %RI column in place if present; it's handled \
+            separately. Leave a field empty if that row isn't present. Never invent a row or \
+            guess a value.
             """)
 
         let response = try await session.respond(
-            to: "OCR text (rows top-to-bottom, columns left-to-right separated by \" | \"):\n\(ocrText)",
+            to: "OCR text (rows top-to-bottom, columns left-to-right separated by \" | \"):\n\(relevantText)",
             generating: NutritionLabelRowSelection.self
         )
         return Self.resolve(response.content)
@@ -153,7 +147,6 @@ enum NutritionLabelExtractor {
         let saltGrams = numbers(matching: #"([\d.]+)\s*g"#, in: selection.saltRow)[safe: index] ?? 0
 
         return ExtractedNutritionLabel(
-            productName: selection.productName,
             servingSizeDescription: columns[safe: index] ?? "1 serving",
             calories: numbers(matching: #"([\d.]+)\s*kcal"#, in: selection.energyRow)[safe: index] ?? 0,
             fatGrams: grams(in: selection.fatRow),
@@ -172,6 +165,34 @@ enum NutritionLabelExtractor {
     /// grams, sodium in mg = salt(g) × 1000 ÷ 2.5 = salt(g) × 400.
     static func sodiumMg(fromSaltGrams saltGrams: Double) -> Double {
         saltGrams * 400
+    }
+
+    /// Keeps only OCR lines likely to be part of the nutrition table, dropping ingredients
+    /// lists, allergen warnings, certification blurbs, and other label text that just adds noise
+    /// (and tokens) without helping. Real-device testing on a busy label hit
+    /// GenerationError.exceededContextWindowSize, and separately had the model pick an
+    /// ingredient-certification sentence as the "product name" — both point at sending the model
+    /// far more text than it needs.
+    static func filterToNutritionRelevantLines(_ ocrText: String) -> String {
+        let keywords = [
+            "energy", "fat", "saturat", "carbohydrate", "sugar", "fibre", "fiber",
+            "protein", "salt", "sodium", "typical value", "nutrition", "per 100", "per serving",
+            "portion", "kcal", "kj", "reference intake", "%ri", "ri*"
+        ]
+        let numericPattern = try? NSRegularExpression(pattern: #"\d+(\.\d+)?\s*(g|mg|kcal|kj|%)"#, options: .caseInsensitive)
+
+        let lines = ocrText.components(separatedBy: "\n")
+        let filtered = lines.filter { line in
+            let lowered = line.lowercased()
+            if keywords.contains(where: lowered.contains) { return true }
+            guard let numericPattern else { return false }
+            let range = NSRange(line.startIndex..., in: line)
+            return numericPattern.firstMatch(in: line, range: range) != nil
+        }
+
+        // Better to risk a long prompt than to send the model nothing, if filtering somehow
+        // stripped every line (e.g. an OCR result with no recognizable label vocabulary at all).
+        return filtered.isEmpty ? ocrText : filtered.joined(separator: "\n")
     }
 
     /// The value-column headers from a row like "Typical Values | Per 100g | Per 40g serving".
