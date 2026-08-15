@@ -70,6 +70,7 @@ struct CalorieCyclingEditorView: View {
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.borderless)
+                .accessibilityLabel("Remove custom target for \(symbol)")
             }
         }
     }

@@ -5,18 +5,28 @@ struct OFFProductResponse: Decodable {
     let product: OFFProduct?
 }
 
+/// Also doubles as a search result row — `code` isn't needed for the single-barcode lookup
+/// (the barcode used to fetch is already known), but search returns many products at once and
+/// each needs its own barcode for caching/logging.
 struct OFFProduct: Decodable {
+    let code: String?
     let productName: String?
     let brands: String?
     let servingSize: String?
     let nutriments: OFFNutriments?
 
     enum CodingKeys: String, CodingKey {
+        case code
         case productName = "product_name"
         case brands
         case servingSize = "serving_size"
         case nutriments
     }
+}
+
+/// Response shape for the text-search endpoint — a page of matching products.
+struct OFFSearchResponse: Decodable {
+    let products: [OFFProduct]
 }
 
 /// Open Food Facts reports most values per 100g, and per-serving values only when the

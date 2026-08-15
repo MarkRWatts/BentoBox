@@ -4,7 +4,12 @@ enum OpenFoodFactsMapper {
     /// Returns nil when OFF has no product for this barcode (status != 1).
     static func makeFoodItem(from response: OFFProductResponse, barcode: String) -> FoodItem? {
         guard response.status == 1, let product = response.product else { return nil }
+        return makeFoodItem(from: product, barcode: barcode)
+    }
 
+    /// Shared by the single-barcode lookup and by search results (each search result is a full
+    /// `OFFProduct`, just without the "was this barcode found at all" status wrapper).
+    static func makeFoodItem(from product: OFFProduct, barcode: String) -> FoodItem {
         let name = product.productName?.trimmingCharacters(in: .whitespacesAndNewlines)
         let resolvedName = (name?.isEmpty == false) ? name! : "Unknown Product"
 

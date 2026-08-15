@@ -29,6 +29,7 @@ private struct MacroRow: View {
                 Circle()
                     .fill(color)
                     .frame(width: 8, height: 8)
+                    .accessibilityHidden(true)
                 Text(name)
                 Spacer()
                 Text("\(Int(consumed))g / \(Int(target))g")
@@ -39,5 +40,8 @@ private struct MacroRow: View {
             ProgressView(value: progress)
                 .tint(color)
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(name)
+        .accessibilityValue("\(Int(consumed)) of \(Int(target)) grams")
     }
 }

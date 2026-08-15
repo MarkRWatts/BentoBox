@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import WidgetKit
 
 struct DashboardView: View {
     let profile: UserProfile
@@ -53,10 +54,12 @@ struct DashboardView: View {
             .navigationDestination(for: MealSlotConfig.self) { slot in
                 MealSlotDetailView(mealSlot: slot)
             }
-            .task {
-                guard profile.useHealthKitEnergyAdjustment else { return }
-                activeEnergyBurnedToday = await HealthKitManager.shared.activeEnergyBurnedToday()
+            .onAppear {
+                Task { await refreshHealthKitEnergy() }
+                writeWidgetSnapshot()
             }
+            .onChange(of: todaysEntries) { _, _ in writeWidgetSnapshot() }
+            .onChange(of: activeEnergyBurnedToday) { _, _ in writeWidgetSnapshot() }
             .overlay(alignment: .bottomTrailing) {
                 quickAddButton
             }
@@ -69,6 +72,40 @@ struct DashboardView: View {
     /// GlassEffectContainer morph animation: a morph is a bigger, higher-risk lift to get right
     /// without a device to check the animation against, and a plain menu already delivers the
     /// "reach a meal slot in one tap from anywhere on Today" goal.
+    /// Runs on every appearance (not just the first) so turning HealthKit adjustment on from
+    /// Settings takes effect the next time you're back on Today, and so today's active energy
+    /// stays current as it changes through the day — a one-shot `.task` only ever ran once per
+    /// view lifetime, which made the toggle look like it did nothing if flipped after Today had
+    /// already appeared once.
+    private func refreshHealthKitEnergy() async {
+        guard profile.useHealthKitEnergyAdjustment else {
+            activeEnergyBurnedToday = nil
+            return
+        }
+        activeEnergyBurnedToday = await HealthKitManager.shared.activeEnergyBurnedToday()
+    }
+
+    /// The widget extension can't share this app's live SwiftData container, so every time
+    /// Today's numbers change we hand it a small snapshot through the shared App Group instead
+    /// and nudge WidgetKit to redraw immediately rather than waiting for its own refresh policy.
+    private func writeWidgetSnapshot() {
+        let macros = summary.macroTargets
+        let snapshot = DashboardSnapshot(
+            consumedCalories: summary.consumedCalories,
+            targetCalories: summary.calorieTarget,
+            consumedProtein: summary.consumedProtein,
+            targetProtein: macros.proteinGrams,
+            consumedCarbs: summary.consumedCarbs,
+            targetCarbs: macros.carbGrams,
+            consumedFat: summary.consumedFat,
+            targetFat: macros.fatGrams,
+            cyclingDeltaToday: summary.calorieCyclingDeltaToday,
+            updatedAt: Date()
+        )
+        snapshot.save()
+        WidgetCenter.shared.reloadTimelines(ofKind: "MealTrackerCalorieWidget")
+    }
+
     private var quickAddButton: some View {
         Menu {
             ForEach(mealSlots) { slot in

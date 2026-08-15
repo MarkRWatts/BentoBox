@@ -1,13 +1,21 @@
 import SwiftUI
 import SwiftData
 
+private enum FoodLoggingSheet: Identifiable {
+    case addFood
+    case barcodeScan
+    case labelScan
+    case manualEntry
+
+    var id: Self { self }
+}
+
 struct MealSlotDetailView: View {
     let mealSlot: MealSlotConfig
     @Query private var entries: [LoggedEntry]
     @Environment(\.modelContext) private var modelContext
-    @State private var isPresentingAddFood = false
-    @State private var isPresentingBarcodeScan = false
-    @State private var isPresentingLabelScan = false
+    @State private var activeSheet: FoodLoggingSheet?
+    @State private var editingEntry: LoggedEntry?
 
     init(mealSlot: MealSlotConfig) {
         self.mealSlot = mealSlot
@@ -32,11 +40,16 @@ struct MealSlotDetailView: View {
                         .foregroundStyle(.secondary)
                 }
                 ForEach(entries) { entry in
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(entry.foodItem?.name ?? "Unknown Food")
-                        Text("\(entry.quantity, specifier: "%.2f") × \(entry.foodItem?.servingSizeDescription ?? "") — \(Int(entry.calories)) cal")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                    Button {
+                        editingEntry = entry
+                    } label: {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(entry.foodItem?.name ?? "Unknown Food")
+                                .foregroundStyle(.primary)
+                            Text("\(entry.quantity, specifier: "%.2f") × \(entry.foodItem?.servingSizeDescription ?? "") — \(Int(entry.calories)) cal")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
                 .onDelete { offsets in
@@ -50,35 +63,33 @@ struct MealSlotDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Menu {
-                    Button {
-                        isPresentingBarcodeScan = true
-                    } label: {
-                        Label("Scan Barcode", systemImage: "barcode.viewfinder")
-                    }
-                    Button {
-                        isPresentingLabelScan = true
-                    } label: {
-                        Label("Scan Nutrition Label", systemImage: "text.viewfinder")
-                    }
-                    Button {
-                        isPresentingAddFood = true
-                    } label: {
-                        Label("Enter Manually", systemImage: "square.and.pencil")
-                    }
+                Button {
+                    activeSheet = .addFood
                 } label: {
                     Label("Add Food", systemImage: "plus")
                 }
             }
         }
-        .sheet(isPresented: $isPresentingAddFood) {
-            ManualFoodEntryView(mealSlot: mealSlot)
+        .sheet(item: $activeSheet) { sheet in
+            switch sheet {
+            case .addFood:
+                AddFoodView(
+                    mealSlot: mealSlot,
+                    onSelectBarcodeScan: { activeSheet = .barcodeScan },
+                    onSelectLabelScan: { activeSheet = .labelScan },
+                    onSelectManualEntry: { activeSheet = .manualEntry },
+                    onLogged: { activeSheet = nil }
+                )
+            case .barcodeScan:
+                BarcodeScanView(mealSlot: mealSlot)
+            case .labelScan:
+                LabelScanView(mealSlot: mealSlot)
+            case .manualEntry:
+                ManualFoodEntryView(mealSlot: mealSlot)
+            }
         }
-        .sheet(isPresented: $isPresentingBarcodeScan) {
-            BarcodeScanView(mealSlot: mealSlot)
-        }
-        .sheet(isPresented: $isPresentingLabelScan) {
-            LabelScanView(mealSlot: mealSlot)
+        .sheet(item: $editingEntry) { entry in
+            EditLoggedEntryView(entry: entry)
         }
     }
 

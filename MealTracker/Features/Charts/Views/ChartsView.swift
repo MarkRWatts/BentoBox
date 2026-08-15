@@ -6,14 +6,27 @@ struct ChartsView: View {
     let profile: UserProfile
 
     @Query(sort: \LoggedEntry.date) private var allLoggedEntries: [LoggedEntry]
+    @Query(sort: \BodyMetricEntry.date) private var allWeightEntries: [BodyMetricEntry]
     @State private var rangeDays = 30
 
     private var loggedEntries: [LoggedEntry] {
         allLoggedEntries.filter { $0.mealSlot?.profile?.id == profile.id }
     }
 
+    private var weightEntries: [BodyMetricEntry] {
+        allWeightEntries.filter { $0.profile?.id == profile.id }
+    }
+
     private var summary: ChartsViewModel {
         ChartsViewModel(profile: profile, loggedEntries: loggedEntries, rangeDays: rangeDays)
+    }
+
+    private var weeklyInsights: WeeklyInsights {
+        InsightsCalculator.weeklyInsights(
+            calorieTrendPoints: summary.calorieTrendPoints,
+            target: summary.calorieTarget,
+            weightEntries: weightEntries
+        )
     }
 
     var body: some View {
@@ -32,6 +45,11 @@ struct ChartsView: View {
 
                 Section {
                     StreakCardView(streakDays: summary.currentStreakDays)
+                }
+                .listRowBackground(Color.clear)
+
+                Section {
+                    InsightsCardView(insights: weeklyInsights, weightUnit: profile.weightUnit)
                 }
                 .listRowBackground(Color.clear)
 
@@ -79,6 +97,60 @@ private struct StreakCardView: View {
         .padding()
         .background(.background.secondary, in: RoundedRectangle(cornerRadius: 16))
         .accessibilityElement(children: .combine)
+    }
+}
+
+private struct InsightsCardView: View {
+    let insights: WeeklyInsights
+    let weightUnit: WeightUnit
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("This Week")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            HStack(spacing: 20) {
+                InsightStatView(value: "\(insights.daysOnTarget + insights.daysUnderTarget)", label: "on track", color: .accentColor)
+                InsightStatView(value: "\(insights.daysOverTarget)", label: "over target", color: .brandProtein)
+                InsightStatView(value: "\(Int(insights.averagePercentOfTarget))%", label: "avg of target", color: .brandCarbs)
+                Spacer()
+            }
+
+            if let weightChangeKG = insights.weightChangeKG {
+                Divider()
+                Label(weightTrendDescription(deltaKG: weightChangeKG), systemImage: weightChangeKG <= 0 ? "arrow.down.right" : "arrow.up.right")
+                    .font(.subheadline)
+                    .foregroundStyle(weightChangeKG <= 0 ? Color.accentColor : Color.brandProtein)
+            }
+        }
+        .padding()
+        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 16))
+        .accessibilityElement(children: .combine)
+    }
+
+    private func weightTrendDescription(deltaKG: Double) -> String {
+        let magnitude = abs(deltaKG)
+        guard magnitude >= 0.1 else { return "Weight steady this week" }
+        let direction = deltaKG < 0 ? "down" : "up"
+        return "Weight \(direction) \(weightUnit.displayString(fromKG: magnitude)) this week"
+    }
+}
+
+private struct InsightStatView: View {
+    let value: String
+    let label: String
+    let color: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(value)
+                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .foregroundStyle(color)
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
     }
 }
 

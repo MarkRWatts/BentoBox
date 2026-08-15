@@ -54,6 +54,7 @@ struct LabelCameraView: View {
                     }
                     .disabled(isCapturing)
                     .padding(.bottom, 40)
+                    .accessibilityLabel("Capture Photo")
                 }
             }
         }

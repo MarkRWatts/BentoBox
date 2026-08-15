@@ -26,6 +26,7 @@ struct MealSlotRowView: View {
                 .foregroundStyle(.white)
                 .frame(width: 32, height: 32)
                 .background(iconStyle.color.gradient, in: RoundedRectangle(cornerRadius: 9))
+                .accessibilityHidden(true)
 
             VStack(alignment: .leading) {
                 Text(mealSlot.name)

@@ -81,6 +81,7 @@ struct LabelScanView: View {
                     .glassEffect(.regular.interactive(), in: Circle())
                     .padding(.leading, 24)
                     .padding(.bottom, 48)
+                    .accessibilityLabel("Choose Photo from Library")
                 }
             } else {
                 // No camera (e.g. Simulator) — fall back to picking an existing photo.

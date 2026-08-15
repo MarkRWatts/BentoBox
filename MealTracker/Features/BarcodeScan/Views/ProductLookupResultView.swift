@@ -44,6 +44,7 @@ struct ProductLookupResultView: View {
     }
 
     private func logEntry() async {
+        foodItem.lastUsedAt = Date()
         let entry = LoggedEntry(
             date: Date(),
             quantity: quantity,

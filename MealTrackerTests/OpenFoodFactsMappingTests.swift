@@ -88,6 +88,43 @@ struct OpenFoodFactsMappingTests {
         #expect(OpenFoodFactsMapper.makeFoodItem(from: response, barcode: "000") == nil)
     }
 
+    @Test func makesFoodItemDirectlyFromProductForSearchResults() throws {
+        // Search results decode straight to OFFProduct (no status/found wrapper), so the shared
+        // overload needs to work without going through OFFProductResponse at all.
+        let json = """
+        {
+          "code": "222333",
+          "product_name": "Oat Milk",
+          "brands": "Acme",
+          "nutriments": {
+            "energy-kcal_100g": 45,
+            "proteins_100g": 1
+          }
+        }
+        """
+        let product = try JSONDecoder().decode(OFFProduct.self, from: Data(json.utf8))
+        let foodItem = OpenFoodFactsMapper.makeFoodItem(from: product, barcode: "222333")
+
+        #expect(foodItem.name == "Oat Milk")
+        #expect(foodItem.barcode == "222333")
+        #expect(foodItem.caloriesPerServing == 45)
+    }
+
+    @Test func decodesSearchResponseWithMultipleProducts() throws {
+        let json = """
+        {
+          "products": [
+            { "code": "111", "product_name": "Product A" },
+            { "code": "222", "product_name": "Product B" }
+          ]
+        }
+        """
+        let response = try JSONDecoder().decode(OFFSearchResponse.self, from: Data(json.utf8))
+
+        #expect(response.products.count == 2)
+        #expect(response.products.map(\.code) == ["111", "222"])
+    }
+
     @Test func parseGramsExtractsLeadingNumber() {
         #expect(OpenFoodFactsMapper.parseGrams(from: "30 g") == 30)
         #expect(OpenFoodFactsMapper.parseGrams(from: "1 bar (45.5g)") == 1) // takes the leading number, not the parenthetical
