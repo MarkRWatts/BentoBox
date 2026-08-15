@@ -14,12 +14,15 @@ struct LabelCameraView: View {
     @State private var controller = LabelCameraController()
     @State private var isCapturing = false
 
-    /// Nutrition tables are usually taller than wide, so the guide is a portrait rectangle
-    /// covering most of the screen width — but not too narrow, since a user cutting the
-    /// left-hand nutrient-label column out of frame breaks row reconstruction entirely (that
-    /// column is what tells it where each new row starts).
-    private let guideWidthFraction: CGFloat = 0.85
-    private let guideAspectRatio: CGFloat = 0.85 // width / height
+    /// A multi-column UK/EU-style table (nutrient names + per-100g + per-serving + Reference
+    /// Intake) is usually *wider* than it is tall — real-device testing showed a taller-than-wide
+    /// guide was pushing users to physically rotate the phone to landscape to fit the full table
+    /// width, which this app (portrait-locked, no rotation-aware capture) doesn't handle: the
+    /// resulting photo comes out with mismatched orientation and OCR reads nothing at all. A wide
+    /// guide lets the whole table fit while holding the phone normally, removing the need to
+    /// rotate rather than trying to make rotated capture work correctly.
+    private let guideWidthFraction: CGFloat = 0.92
+    private let guideAspectRatio: CGFloat = 1.3 // width / height
 
     var body: some View {
         GeometryReader { geometry in
