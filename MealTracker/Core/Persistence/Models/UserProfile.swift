@@ -12,6 +12,7 @@ final class UserProfile {
     var goalRateKgPerWeek: Double = 0
     var proteinGramsPerKgOverride: Double?
     var useHealthKitEnergyAdjustment: Bool = false
+    var isCalorieCyclingEnabled: Bool = false
     var createdAt: Date = Date()
     var updatedAt: Date = Date()
 
@@ -20,6 +21,9 @@ final class UserProfile {
 
     @Relationship(deleteRule: .cascade, inverse: \MealSlotConfig.profile)
     var mealSlots: [MealSlotConfig] = []
+
+    @Relationship(deleteRule: .cascade, inverse: \DayCalorieOverride.profile)
+    var calorieDayOverrides: [DayCalorieOverride] = []
 
     init(
         sex: BiologicalSex,

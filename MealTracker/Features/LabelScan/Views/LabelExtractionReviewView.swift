@@ -50,8 +50,10 @@ struct LabelExtractionReviewView: View {
 
             Section {
                 Button("Add to \(mealSlot.name)") {
-                    viewModel.saveEntry(mealSlot: mealSlot, context: modelContext)
-                    onSaved()
+                    Task {
+                        await viewModel.saveEntry(mealSlot: mealSlot, context: modelContext)
+                        onSaved()
+                    }
                 }
                 .fontWeight(.semibold)
                 .disabled(!viewModel.isValid)

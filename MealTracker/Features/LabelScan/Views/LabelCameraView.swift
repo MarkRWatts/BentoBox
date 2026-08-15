@@ -41,7 +41,7 @@ struct LabelCameraView: View {
                         .foregroundStyle(.white)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 10)
-                        .background(.ultraThinMaterial, in: Capsule())
+                        .glassEffect(.regular, in: Capsule())
                         .padding(.bottom, 24)
 
                     Button {

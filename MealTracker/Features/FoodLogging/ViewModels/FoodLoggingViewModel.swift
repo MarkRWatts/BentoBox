@@ -27,7 +27,7 @@ final class FoodLoggingViewModel {
         !name.trimmingCharacters(in: .whitespaces).isEmpty && calories >= 0
     }
 
-    func saveEntry(mealSlot: MealSlotConfig, context: ModelContext) {
+    func saveEntry(mealSlot: MealSlotConfig, context: ModelContext) async {
         let foodItem = FoodItem(
             name: name.trimmingCharacters(in: .whitespaces),
             brand: brand.isEmpty ? nil : brand,
@@ -53,7 +53,8 @@ final class FoodLoggingViewModel {
             mealSlot: mealSlot
         )
         context.insert(entry)
-
         try? context.save()
+
+        await entry.syncToHealthKit(context: context)
     }
 }

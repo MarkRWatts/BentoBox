@@ -47,9 +47,11 @@ struct ManualFoodEntryView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        viewModel.saveEntry(mealSlot: mealSlot, context: modelContext)
-                        onSaved?()
-                        dismiss()
+                        Task {
+                            await viewModel.saveEntry(mealSlot: mealSlot, context: modelContext)
+                            onSaved?()
+                            dismiss()
+                        }
                     }
                     .disabled(!viewModel.isValid)
                 }

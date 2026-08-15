@@ -61,3 +61,4 @@ targets:
       base:
         SWIFT_VERSION: "6.0"
         PRODUCT_BUNDLE_IDENTIFIER: com.markwatts.MealTrackerTests
+        GENERATE_INFOPLIST_FILE: YES

@@ -77,8 +77,8 @@ struct LabelScanView: View {
                             .font(.system(size: 20))
                             .foregroundStyle(.white)
                             .frame(width: 44, height: 44)
-                            .background(.ultraThinMaterial, in: Circle())
                     }
+                    .glassEffect(.regular.interactive(), in: Circle())
                     .padding(.leading, 24)
                     .padding(.bottom, 48)
                 }

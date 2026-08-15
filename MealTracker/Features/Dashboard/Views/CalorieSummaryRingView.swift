@@ -31,6 +31,12 @@ struct CalorieSummaryRingView: View {
                  : "\(Int(-summary.remainingCalories)) cal over")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
+
+            if let delta = summary.calorieCyclingDeltaToday {
+                Text(delta > 0 ? "+\(Int(delta)) cal today (cycling)" : "\(Int(delta)) cal today (cycling)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 }

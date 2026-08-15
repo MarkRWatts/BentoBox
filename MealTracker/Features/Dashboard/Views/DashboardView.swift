@@ -6,6 +6,8 @@ struct DashboardView: View {
 
     @Query(sort: \MealSlotConfig.sortOrder) private var allMealSlots: [MealSlotConfig]
     @Query private var todaysEntries: [LoggedEntry]
+    @State private var activeEnergyBurnedToday: Double?
+    @State private var path = NavigationPath()
 
     init(profile: UserProfile) {
         self.profile = profile
@@ -22,11 +24,11 @@ struct DashboardView: View {
     }
 
     private var summary: DashboardViewModel {
-        DashboardViewModel(profile: profile, todaysEntries: todaysEntries)
+        DashboardViewModel(profile: profile, todaysEntries: todaysEntries, activeEnergyBurnedToday: activeEnergyBurnedToday)
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             List {
                 Section {
                     CalorieSummaryRingView(summary: summary)
@@ -51,6 +53,34 @@ struct DashboardView: View {
             .navigationDestination(for: MealSlotConfig.self) { slot in
                 MealSlotDetailView(mealSlot: slot)
             }
+            .task {
+                guard profile.useHealthKitEnergyAdjustment else { return }
+                activeEnergyBurnedToday = await HealthKitManager.shared.activeEnergyBurnedToday()
+            }
+            .overlay(alignment: .bottomTrailing) {
+                quickAddButton
+            }
         }
+    }
+
+    /// The plan's "primary custom-glass moment" — a floating action button people reach for
+    /// constantly deserves the deliberate Liquid Glass treatment, unlike the dashboard's data
+    /// cards. Kept to a plain Menu (system glass chrome) rather than a custom
+    /// GlassEffectContainer morph animation: a morph is a bigger, higher-risk lift to get right
+    /// without a device to check the animation against, and a plain menu already delivers the
+    /// "reach a meal slot in one tap from anywhere on Today" goal.
+    private var quickAddButton: some View {
+        Menu {
+            ForEach(mealSlots) { slot in
+                Button(slot.name) { path.append(slot) }
+            }
+        } label: {
+            Image(systemName: "plus")
+                .font(.title2.weight(.semibold))
+                .frame(width: 56, height: 56)
+        }
+        .glassEffect(.regular.interactive(), in: Circle())
+        .padding(20)
+        .accessibilityLabel("Log Food")
     }
 }

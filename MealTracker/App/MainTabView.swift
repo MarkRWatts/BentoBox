@@ -10,6 +10,11 @@ struct MainTabView: View {
                     Label("Today", systemImage: "chart.pie.fill")
                 }
 
+            ChartsView(profile: profile)
+                .tabItem {
+                    Label("Trends", systemImage: "chart.line.uptrend.xyaxis")
+                }
+
             SettingsView(profile: profile)
                 .tabItem {
                     Label("Settings", systemImage: "gearshape.fill")

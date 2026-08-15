@@ -22,7 +22,7 @@ struct OnboardingFlowView: View {
                         OnboardingGoalStepView(viewModel: viewModel)
                     case .summary:
                         OnboardingSummaryStepView(viewModel: viewModel) {
-                            viewModel.completeOnboarding(context: modelContext)
+                            Task { await viewModel.completeOnboarding(context: modelContext) }
                         }
                     }
                 }
