@@ -4,6 +4,7 @@ import VisionKit
 
 struct BarcodeScanView: View {
     let mealSlot: MealSlotConfig
+    var date: Date = Date()
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -24,11 +25,12 @@ struct BarcodeScanView: View {
                 case .lookingUp:
                     ProgressView("Looking up product…")
                 case .found(let foodItem):
-                    ProductLookupResultView(foodItem: foodItem, mealSlot: mealSlot, onLogged: dismiss.callAsFunction)
+                    ProductLookupResultView(foodItem: foodItem, mealSlot: mealSlot, date: date, onLogged: dismiss.callAsFunction)
                 case .notFound(let barcode):
                     ProductNotFoundView(
                         barcode: barcode,
                         mealSlot: mealSlot,
+                        date: date,
                         onLogged: dismiss.callAsFunction,
                         onRetry: viewModel.reset
                     )

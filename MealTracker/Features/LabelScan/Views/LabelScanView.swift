@@ -5,6 +5,7 @@ import AVFoundation
 
 struct LabelScanView: View {
     let mealSlot: MealSlotConfig
+    var date: Date = Date()
 
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel = LabelScanViewModel()
@@ -24,7 +25,7 @@ struct LabelScanView: View {
                 case .processing:
                     ProgressView("Reading label…")
                 case .ready(let extracted):
-                    LabelExtractionReviewView(extracted: extracted, mealSlot: mealSlot, onSaved: dismiss.callAsFunction)
+                    LabelExtractionReviewView(extracted: extracted, mealSlot: mealSlot, date: date, onSaved: dismiss.callAsFunction)
                 case .unavailable(let message):
                     ContentUnavailableView {
                         Label("Apple Intelligence Unavailable", systemImage: "apple.intelligence")
@@ -53,7 +54,7 @@ struct LabelScanView: View {
                 }
             }
             .sheet(isPresented: $isPresentingManualEntry) {
-                ManualFoodEntryView(mealSlot: mealSlot, onSaved: dismiss.callAsFunction)
+                ManualFoodEntryView(mealSlot: mealSlot, date: date, onSaved: dismiss.callAsFunction)
             }
         }
     }

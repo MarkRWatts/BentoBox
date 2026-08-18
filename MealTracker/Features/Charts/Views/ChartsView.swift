@@ -1,6 +1,5 @@
 import SwiftUI
 import SwiftData
-import Charts
 
 struct ChartsView: View {
     let profile: UserProfile
@@ -8,6 +7,7 @@ struct ChartsView: View {
     @Query(sort: \LoggedEntry.date) private var allLoggedEntries: [LoggedEntry]
     @Query(sort: \BodyMetricEntry.date) private var allWeightEntries: [BodyMetricEntry]
     @State private var rangeDays = 30
+    @State private var weekCardsOffset = 0
 
     private var loggedEntries: [LoggedEntry] {
         allLoggedEntries.filter { $0.mealSlot?.profile?.id == profile.id }
@@ -19,6 +19,13 @@ struct ChartsView: View {
 
     private var summary: ChartsViewModel {
         ChartsViewModel(profile: profile, loggedEntries: loggedEntries, rangeDays: rangeDays)
+    }
+
+    /// Independent of `rangeDays` — a fixed Mon–Sun calendar week with its own back/forward
+    /// navigation, since the weekly cards need real week boundaries (empty future-day bars)
+    /// rather than a trailing-N-days window.
+    private var weeklyCards: WeeklyCardsViewModel {
+        WeeklyCardsViewModel(profile: profile, loggedEntries: loggedEntries, weekOffset: weekCardsOffset)
     }
 
     private var weeklyInsights: WeeklyInsights {
@@ -66,9 +73,16 @@ struct ChartsView: View {
                     }
                 }
 
-                Section("Calories") {
-                    CalorieTrendChartView(points: summary.calorieTrendPoints, target: summary.calorieTarget)
+                Section {
+                    WeekNavigationHeaderView(
+                        weekStart: weeklyCards.weekStart,
+                        onPrevious: { weekCardsOffset -= 1 },
+                        onNext: { weekCardsOffset += 1 }
+                    )
+                    CaloriesWeekCardView(summary: weeklyCards)
+                    MacronutrientsWeekCardView(summary: weeklyCards)
                 }
+                .listRowBackground(Color.clear)
             }
             .navigationTitle("Trends")
         }
@@ -199,32 +213,38 @@ private struct BMISummaryRowView: View {
     }
 }
 
-private struct CalorieTrendChartView: View {
-    let points: [CalorieTrendPoint]
-    let target: Double
+private struct WeekNavigationHeaderView: View {
+    let weekStart: Date
+    var onPrevious: () -> Void
+    var onNext: () -> Void
+
+    private var weekEnd: Date {
+        Calendar.current.date(byAdding: .day, value: 6, to: weekStart) ?? weekStart
+    }
+
+    private var rangeText: String {
+        let sameMonth = Calendar.current.isDate(weekStart, equalTo: weekEnd, toGranularity: .month)
+        let startText = weekStart.formatted(.dateTime.month(.abbreviated).day())
+        let endText = sameMonth
+            ? weekEnd.formatted(.dateTime.day())
+            : weekEnd.formatted(.dateTime.month(.abbreviated).day())
+        return "\(startText) – \(endText)"
+    }
 
     var body: some View {
-        if points.isEmpty {
-            ContentUnavailableView("No Meals Logged", systemImage: "chart.bar.fill", description: Text("Log a meal to see your calorie trend here."))
-                .frame(height: 180)
-        } else {
-            Chart {
-                ForEach(points) { point in
-                    BarMark(x: .value("Date", point.date, unit: .day), y: .value("Calories", point.calories))
-                        .foregroundStyle(point.calories > target ? Color.brandProtein : Color.accentColor)
-                        .cornerRadius(4)
-                }
-                RuleMark(y: .value("Target", target))
-                    .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [4, 4]))
-                    .foregroundStyle(.secondary)
-                    .annotation(position: .top, alignment: .leading) {
-                        Text("Target: \(Int(target))")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
+        HStack {
+            Button(action: onPrevious) {
+                Image(systemName: "chevron.left")
             }
-            .frame(height: 180)
-            .accessibilityLabel("Daily calories against target of \(Int(target))")
+            Spacer()
+            Text(rangeText)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+            Spacer()
+            Button(action: onNext) {
+                Image(systemName: "chevron.right")
+            }
         }
+        .buttonStyle(.plain)
     }
 }

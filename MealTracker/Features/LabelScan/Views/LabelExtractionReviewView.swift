@@ -6,6 +6,7 @@ import SwiftData
 struct LabelExtractionReviewView: View {
     let extracted: ExtractedNutritionLabel
     let mealSlot: MealSlotConfig
+    var date: Date = Date()
     var onSaved: () -> Void
 
     @Environment(\.modelContext) private var modelContext
@@ -50,7 +51,7 @@ struct LabelExtractionReviewView: View {
 
             Section {
                 Button("Add to \(mealSlot.name)") {
-                    viewModel.saveEntry(mealSlot: mealSlot, context: modelContext)
+                    viewModel.saveEntry(mealSlot: mealSlot, date: date, context: modelContext)
                     onSaved()
                 }
                 .fontWeight(.semibold)

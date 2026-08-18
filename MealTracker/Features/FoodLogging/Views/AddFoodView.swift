@@ -7,6 +7,7 @@ import SwiftData
 /// you log them again, so "Recent" already reads as "Frequent" in practice.
 struct AddFoodView: View {
     let mealSlot: MealSlotConfig
+    var date: Date = Date()
     var onSelectBarcodeScan: () -> Void
     var onSelectLabelScan: () -> Void
     var onSelectManualEntry: () -> Void
@@ -50,7 +51,7 @@ struct AddFoodView: View {
                         Section("Recent") {
                             ForEach(recentItems) { item in
                                 NavigationLink {
-                                    ProductLookupResultView(foodItem: item, mealSlot: mealSlot, onLogged: onLogged)
+                                    ProductLookupResultView(foodItem: item, mealSlot: mealSlot, date: date, onLogged: onLogged)
                                 } label: {
                                     RecentFoodRowView(foodItem: item)
                                 }
@@ -102,7 +103,7 @@ struct AddFoodView: View {
             Section("Results") {
                 ForEach(searchResults, id: \.code) { product in
                     NavigationLink {
-                        ProductLookupResultView(foodItem: resolveFoodItem(for: product), mealSlot: mealSlot, onLogged: onLogged)
+                        ProductLookupResultView(foodItem: resolveFoodItem(for: product), mealSlot: mealSlot, date: date, onLogged: onLogged)
                     } label: {
                         SearchResultRowView(product: product)
                     }

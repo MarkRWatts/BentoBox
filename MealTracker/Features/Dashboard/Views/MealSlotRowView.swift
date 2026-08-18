@@ -15,7 +15,10 @@ struct MealSlotRowView: View {
         case let name where name.contains("breakfast"): ("sun.horizon.fill", .brandProtein)
         case let name where name.contains("lunch"): ("sun.max.fill", .brandCarbs)
         case let name where name.contains("dinner"): ("moon.stars.fill", .brandFat)
-        default: (mealSlot.slotType == .meal ? "fork.knife" : "leaf.fill", .accentColor)
+        // `.brandForest` rather than `.accentColor` — the accent color asset brightens
+        // considerably in dark mode (better for text/tints), which leaves the white glyph on
+        // top of this icon badge with too little contrast to read clearly.
+        default: (mealSlot.slotType == .meal ? "fork.knife" : "leaf.fill", .brandForest)
         }
     }
 

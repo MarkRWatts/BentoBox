@@ -4,6 +4,7 @@ import SwiftData
 struct ProductLookupResultView: View {
     let foodItem: FoodItem
     let mealSlot: MealSlotConfig
+    var date: Date = Date()
     var onLogged: () -> Void
 
     @Environment(\.modelContext) private var modelContext
@@ -44,9 +45,12 @@ struct ProductLookupResultView: View {
     }
 
     private func logEntry() {
+        // Real "now", not `date` — this drives AddFoodView's "Recent" sort order, which should
+        // reflect actual usage time even when the entry itself is being backfilled to an
+        // earlier day.
         foodItem.lastUsedAt = Date()
         let entry = LoggedEntry(
-            date: Date(),
+            date: date,
             quantity: quantity,
             mealSlotNameSnapshot: mealSlot.name,
             foodItem: foodItem,

@@ -7,6 +7,7 @@ struct ManualFoodEntryView: View {
     @State private var viewModel = FoodLoggingViewModel()
 
     let mealSlot: MealSlotConfig
+    var date: Date = Date()
     var prefilledBarcode: String?
     var onSaved: (() -> Void)?
 
@@ -47,7 +48,7 @@ struct ManualFoodEntryView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        viewModel.saveEntry(mealSlot: mealSlot, context: modelContext)
+                        viewModel.saveEntry(mealSlot: mealSlot, date: date, context: modelContext)
                         onSaved?()
                         dismiss()
                     }

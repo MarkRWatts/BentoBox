@@ -12,16 +12,24 @@ private enum FoodLoggingSheet: Identifiable {
 
 struct MealSlotDetailView: View {
     let mealSlot: MealSlotConfig
+    let date: Date
+    /// Pops this view back to the dashboard list — passed down rather than owned here since the
+    /// `NavigationPath` it mutates belongs to `DashboardView`. Lets the same "Today" toolbar
+    /// button reach a user who's drilled into a meal slot, matching the dashboard's own button
+    /// one level up: pop here, then (if the date still isn't today) jump on the second tap.
+    let onGoToToday: () -> Void
     @Query private var entries: [LoggedEntry]
     @Environment(\.modelContext) private var modelContext
     @State private var activeSheet: FoodLoggingSheet?
     @State private var editingEntry: LoggedEntry?
 
-    init(mealSlot: MealSlotConfig) {
+    init(mealSlot: MealSlotConfig, date: Date, onGoToToday: @escaping () -> Void) {
         self.mealSlot = mealSlot
+        self.date = date
+        self.onGoToToday = onGoToToday
         let slotID = mealSlot.id
-        let startOfDay = Date().startOfDay
-        let endOfDay = Date().endOfDay
+        let startOfDay = date.startOfDay
+        let endOfDay = date.endOfDay
         let predicate = #Predicate<LoggedEntry> { entry in
             entry.mealSlot?.id == slotID && entry.date >= startOfDay && entry.date < endOfDay
         }
@@ -30,6 +38,14 @@ struct MealSlotDetailView: View {
 
     private var totalCalories: Double {
         entries.reduce(0) { $0 + $1.calories }
+    }
+
+    /// Surfaces which day you're logging into while backfilling a past/future day, so it's
+    /// clear this isn't logging against real "now".
+    private var navigationTitleText: String {
+        Calendar.current.isDateInToday(date)
+            ? mealSlot.name
+            : "\(mealSlot.name) · \(date.formatted(.dateTime.month(.abbreviated).day()))"
     }
 
     var body: some View {
@@ -57,9 +73,12 @@ struct MealSlotDetailView: View {
                 Text("\(Int(totalCalories)) calories logged")
             }
         }
-        .navigationTitle(mealSlot.name)
+        .navigationTitle(navigationTitleText)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("Today", action: onGoToToday)
+            }
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     activeSheet = .addFood
@@ -73,17 +92,18 @@ struct MealSlotDetailView: View {
             case .addFood:
                 AddFoodView(
                     mealSlot: mealSlot,
+                    date: date,
                     onSelectBarcodeScan: { activeSheet = .barcodeScan },
                     onSelectLabelScan: { activeSheet = .labelScan },
                     onSelectManualEntry: { activeSheet = .manualEntry },
                     onLogged: { activeSheet = nil }
                 )
             case .barcodeScan:
-                BarcodeScanView(mealSlot: mealSlot)
+                BarcodeScanView(mealSlot: mealSlot, date: date)
             case .labelScan:
-                LabelScanView(mealSlot: mealSlot)
+                LabelScanView(mealSlot: mealSlot, date: date)
             case .manualEntry:
-                ManualFoodEntryView(mealSlot: mealSlot)
+                ManualFoodEntryView(mealSlot: mealSlot, date: date)
             }
         }
         .sheet(item: $editingEntry) { entry in

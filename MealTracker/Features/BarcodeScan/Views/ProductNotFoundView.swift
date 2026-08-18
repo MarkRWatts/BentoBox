@@ -3,6 +3,7 @@ import SwiftUI
 struct ProductNotFoundView: View {
     let barcode: String
     let mealSlot: MealSlotConfig
+    var date: Date = Date()
     var onLogged: () -> Void
     var onRetry: () -> Void
 
@@ -22,7 +23,7 @@ struct ProductNotFoundView: View {
             }
         }
         .sheet(isPresented: $isShowingManualFoodEntry) {
-            ManualFoodEntryView(mealSlot: mealSlot, prefilledBarcode: barcode, onSaved: onLogged)
+            ManualFoodEntryView(mealSlot: mealSlot, date: date, prefilledBarcode: barcode, onSaved: onLogged)
         }
     }
 }
