@@ -1,6 +1,6 @@
-# Bento Box
+# re:Track
 
-<img src="MealTracker/Assets.xcassets/AppIcon.appiconset/AppIcon-Light.png" width="120" alt="Bento Box app icon" />
+<img src="MealTracker/Assets.xcassets/AppIcon.appiconset/AppIcon-Light.png" width="120" alt="re:Track app icon" />
 
 A native iOS calorie and meal tracker — barcode scanning, on-device nutrition-label photo scanning, TDEE-based calorie budgeting, configurable meal slots, calorie cycling, BMI/weight tracking, and a Home Screen/Lock Screen widget. All data stays on-device.
 
@@ -14,8 +14,10 @@ A native iOS calorie and meal tracker — barcode scanning, on-device nutrition-
   - **Recent foods** for one-tap re-logging of anything you've logged before.
   - **Manual entry** and **editing** an already-logged entry (quantity edits are in-place; nutrition edits detach a private copy so they never retroactively change what you logged on other days).
 - **Dashboard** — calorie ring, macro breakdown, today's meals, with a floating Liquid Glass quick-add button.
+  - **Date navigation** — a Mon–Sun week strip (each day showing a progress ring glyph) plus a month calendar sheet for jumping further back or forward.
+  - **Today shortcut** — tapping the already-active "Today" tab pops any pushed meal detail and then jumps back to today's date, mirroring the standard iOS re-tap-current-tab idiom; the dashboard also snaps back to today on its own the first time it's opened on a new calendar day.
 - **Calorie cycling** — set higher-calorie days (e.g. Friday/Saturday); every other day automatically absorbs the opposite delta so the weekly total (and macros) stay unchanged.
-- **Trends tab** — weight and calorie history charts, a weekly insights card (days on/over target, average % of target, weight trend), and:
+- **Trends tab** — weekly calorie and macro summary cards (Mon–Sun, with back/forward navigation), weight and calorie history charts, a weekly insights card (days on/over target, average % of target, weight trend), and:
   - **BMI tracking** — current BMI, category, trend chart, and a target BMI/weight aimed at the midpoint of the normal range.
   - **Weight tracking** — matching styling to the BMI screen, gauge scaled to this person's height.
 - **Widget** — Home Screen (small/medium) and Lock Screen (circular/rectangular) calorie widgets, bridged to the app via an App Group snapshot.
@@ -50,7 +52,7 @@ Run `xcodegen generate` again any time `project.yml` changes — it fully regene
 xcodebuild -project MealTracker.xcodeproj -scheme MealTracker -destination 'platform=iOS Simulator,name=iPhone 17' test
 ```
 
-73 tests across 13 suites, covering every pure calculator (TDEE, BMI, calorie cycling, unit conversion, insights), the Open Food Facts DTO mapping, and the SwiftUI view models. Camera, OCR/Foundation Models, and widget behavior aren't covered by the test suite and need manual on-device verification.
+83 tests across 15 suites, covering every pure calculator (TDEE, BMI, calorie cycling, unit conversion, insights, day progress), the Open Food Facts DTO mapping, and the SwiftUI view models (including the weekly Trends cards). Camera, OCR/Foundation Models, and widget behavior aren't covered by the test suite and need manual on-device verification.
 
 ## Architecture
 

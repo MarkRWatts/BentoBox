@@ -4,7 +4,7 @@ struct OpenFoodFactsClient {
     private let session: URLSession
     private let baseURL = URL(string: "https://world.openfoodfacts.org/api/v2/product/")!
     private let searchURL = URL(string: "https://world.openfoodfacts.org/cgi/search.pl")!
-    private let userAgent = "BentoBox/1.0 (iOS)"
+    private let userAgent = "ReTrack/1.0 (iOS)"
 
     init(session: URLSession = .shared) {
         self.session = session

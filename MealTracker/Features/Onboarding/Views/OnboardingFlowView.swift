@@ -27,7 +27,7 @@ struct OnboardingFlowView: View {
                     }
                 }
             }
-            .navigationTitle("Set Up Bento Box")
+            .navigationTitle("Set Up re:Track")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 if viewModel.step != .basics {

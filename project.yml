@@ -25,13 +25,13 @@ targets:
     info:
       path: Generated/MealTracker-Info.plist
       properties:
-        CFBundleDisplayName: Bento Box
+        CFBundleDisplayName: "re:Track"
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         UISupportedInterfaceOrientations~ipad:
           - UIInterfaceOrientationPortrait
-        NSCameraUsageDescription: "Bento Box uses your camera to scan barcodes and nutrition labels."
+        NSCameraUsageDescription: "re:Track uses your camera to scan barcodes and nutrition labels."
     entitlements:
       path: Generated/MealTracker.entitlements
       properties:
@@ -63,7 +63,7 @@ targets:
     info:
       path: Generated/MealTrackerWidget-Info.plist
       properties:
-        CFBundleDisplayName: Bento Box
+        CFBundleDisplayName: "re:Track"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     entitlements:
