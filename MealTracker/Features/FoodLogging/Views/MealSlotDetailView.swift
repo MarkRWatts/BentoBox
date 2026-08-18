@@ -13,20 +13,14 @@ private enum FoodLoggingSheet: Identifiable {
 struct MealSlotDetailView: View {
     let mealSlot: MealSlotConfig
     let date: Date
-    /// Pops this view back to the dashboard list — passed down rather than owned here since the
-    /// `NavigationPath` it mutates belongs to `DashboardView`. Lets the same "Today" toolbar
-    /// button reach a user who's drilled into a meal slot, matching the dashboard's own button
-    /// one level up: pop here, then (if the date still isn't today) jump on the second tap.
-    let onGoToToday: () -> Void
     @Query private var entries: [LoggedEntry]
     @Environment(\.modelContext) private var modelContext
     @State private var activeSheet: FoodLoggingSheet?
     @State private var editingEntry: LoggedEntry?
 
-    init(mealSlot: MealSlotConfig, date: Date, onGoToToday: @escaping () -> Void) {
+    init(mealSlot: MealSlotConfig, date: Date) {
         self.mealSlot = mealSlot
         self.date = date
-        self.onGoToToday = onGoToToday
         let slotID = mealSlot.id
         let startOfDay = date.startOfDay
         let endOfDay = date.endOfDay
@@ -76,9 +70,6 @@ struct MealSlotDetailView: View {
         .navigationTitle(navigationTitleText)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button("Today", action: onGoToToday)
-            }
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     activeSheet = .addFood

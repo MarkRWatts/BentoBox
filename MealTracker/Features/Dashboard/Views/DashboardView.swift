@@ -4,6 +4,8 @@ import WidgetKit
 
 struct DashboardView: View {
     let profile: UserProfile
+    /// Changes each time the already-active "Today" tab is tapped again — see `MainTabView`.
+    let goToTodayTrigger: UUID
 
     @Query(sort: \MealSlotConfig.sortOrder) private var allMealSlots: [MealSlotConfig]
     @Query(sort: \LoggedEntry.date) private var allEntries: [LoggedEntry]
@@ -44,12 +46,6 @@ struct DashboardView: View {
         return selectedDate.formatted(.dateTime.month(.abbreviated).day())
     }
 
-    /// False whenever there's still something for the "Today" button to do: pop a pushed meal
-    /// slot detail, or jump the selected date. True only once both are already settled.
-    private var isShowingToday: Bool {
-        path.isEmpty && Calendar.current.isDateInToday(selectedDate)
-    }
-
     var body: some View {
         NavigationStack(path: $path) {
             List {
@@ -80,11 +76,6 @@ struct DashboardView: View {
             }
             .navigationTitle(navigationTitleText)
             .toolbar {
-                if !isShowingToday {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button("Today", action: goToToday)
-                    }
-                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         isShowingMonthCalendar = true
@@ -95,7 +86,7 @@ struct DashboardView: View {
                 }
             }
             .navigationDestination(for: MealSlotConfig.self) { slot in
-                MealSlotDetailView(mealSlot: slot, date: selectedDate, onGoToToday: goToToday)
+                MealSlotDetailView(mealSlot: slot, date: selectedDate)
             }
             .sheet(isPresented: $isShowingMonthCalendar) {
                 MonthCalendarView(selectedDate: $selectedDate, profile: profile, entries: profileEntries)
@@ -108,6 +99,7 @@ struct DashboardView: View {
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .active { resetToTodayIfNewDay() }
             }
+            .onChange(of: goToTodayTrigger) { _, _ in goToToday() }
             .overlay(alignment: .bottomTrailing) {
                 quickAddButton
             }
@@ -147,8 +139,8 @@ struct DashboardView: View {
     }
 
     /// Pops any pushed meal slot detail first; only jumps the date once the stack is already at
-    /// the list. A user drilled into a detail screen on a past day thus needs two taps — one to
-    /// back out, one to actually land on today — mirroring the standard "tap twice" tab-root idiom.
+    /// the list. A user drilled into a detail screen on a past day thus needs two re-taps of the
+    /// "Today" tab to land on today — one to back out, one to jump the date.
     private func goToToday() {
         withAnimation {
             if !path.isEmpty {
