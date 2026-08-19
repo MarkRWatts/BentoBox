@@ -84,9 +84,13 @@ struct SettingsView: View {
                 }
             }
             .contentMargins(.top, 0, for: .scrollContent)
-            .navigationTitle("Settings")
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar(.hidden, for: .navigationBar)
+            // Kept technically visible (never `.toolbar(.hidden, for: .navigationBar)`) rather
+            // than toggled hidden — see the matching comment in ChartsView.swift for why: a List
+            // nested in a TabView's per-tab NavigationStack has a known SwiftUI/iOS 26 bug where
+            // hiding the nav bar replays its hide animation on every tab re-selection.
+            .toolbarBackground(.hidden, for: .navigationBar)
             .sheet(isPresented: $isPresentingLogWeight) {
                 LogWeightView(profile: profile)
             }

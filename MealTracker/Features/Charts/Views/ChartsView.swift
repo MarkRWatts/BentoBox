@@ -97,9 +97,16 @@ struct ChartsView: View {
             .scrollContentBackground(.hidden)
             .background(Color.dashboardCanvas)
             .contentMargins(.top, 0, for: .scrollContent)
-            .navigationTitle("Trends")
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar(.hidden, for: .navigationBar)
+            // Kept technically visible (never `.toolbar(.hidden, for: .navigationBar)`) rather
+            // than toggled hidden — a List nested in a TabView's per-tab NavigationStack has a
+            // known SwiftUI/iOS 26 bug where hiding the nav bar replays its hide animation on
+            // every tab re-selection, producing a visible stutter on every switch (see
+            // https://developer.apple.com/forums/thread/758923). Only the background and title
+            // are hidden here, which sidesteps that hide/show state machine entirely and leaves
+            // push/pop transitions elsewhere untouched.
+            .toolbarBackground(.hidden, for: .navigationBar)
         }
     }
 }
