@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// Apple Fitness-style month grid: a concentric ring glyph per day, month-to-month navigation,
-/// tap a day to jump the Dashboard there. Monday-first (hardcoded, matching `WeekStripView`) and
-/// adapts to system light/dark rather than forcing dark chrome, unlike Apple's own app.
+/// Apple Fitness-style month grid: a dot per day (filled when that day has logged entries),
+/// month-to-month navigation, tap a day to jump the Dashboard there. Monday-first (hardcoded,
+/// matching `WeekStripView`) and adapts to system light/dark rather than forcing dark chrome,
+/// unlike Apple's own app.
 struct MonthCalendarView: View {
     @Binding var selectedDate: Date
     let profile: UserProfile
@@ -121,22 +122,22 @@ struct MonthCalendarView: View {
         let isInDisplayedMonth = calendar.isDate(day, equalTo: displayedMonth, toGranularity: .month)
         let isSelected = calendar.isDate(day, inSameDayAs: selectedDate)
         let isToday = calendar.isDateInToday(day)
+        let hasEntries = DayProgressCalculator.dayProgress(for: day, profile: profile, entries: entries).hasEntries
 
         Button {
             selectedDate = day
             dismiss()
         } label: {
             VStack(spacing: 2) {
-                DayProgressRingGlyph(
-                    progress: DayProgressCalculator.dayProgress(for: day, profile: profile, entries: entries),
-                    size: 34
-                )
-                .opacity(isInDisplayedMonth ? 1 : 0.3)
-                .overlay {
-                    if isToday {
-                        Circle().stroke(Color.accentColor, lineWidth: 1.5).padding(-3)
+                Circle()
+                    .fill(hasEntries ? Color.accentColor : Color.secondary.opacity(0.25))
+                    .frame(width: 34, height: 34)
+                    .opacity(isInDisplayedMonth ? 1 : 0.3)
+                    .overlay {
+                        if isToday {
+                            Circle().stroke(Color.accentColor, lineWidth: 1.5).padding(-3)
+                        }
                     }
-                }
                 Text("\(calendar.component(.day, from: day))")
                     .font(.caption2)
                     .foregroundStyle(isInDisplayedMonth ? .primary : .secondary)

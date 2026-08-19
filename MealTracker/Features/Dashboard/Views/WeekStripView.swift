@@ -1,18 +1,22 @@
 import SwiftUI
+import UIKit
 
-/// Horizontally paged Mon–Sun week strip. Swiping to a new week preserves the selected weekday
-/// index (e.g. Wed → next week's Wed) rather than resetting to Monday, so the highlighted cell
-/// never jumps unexpectedly. Monday-first is hardcoded (not the device locale's first weekday) to
-/// match the Mon–Sun layout used throughout this feature.
+/// Continuously scrollable day strip styled after the Apple Health day picker: a big
+/// relative-date heading, then a caret fixed at the horizontal center with a row of weekday
+/// initials and a row of dots (filled when that day has logged entries, matching
+/// `MonthCalendarView`'s dots) scrolling underneath it. Scrolling changes which day sits under
+/// the fixed caret, snapping one day at a time, rather than paging whole calendar weeks.
+/// Monday-first is hardcoded (not the device locale's first weekday) to match the Mon–Sun layout
+/// used throughout this feature.
 struct WeekStripView: View {
     @Binding var selectedDate: Date
     let profile: UserProfile
     let entries: [LoggedEntry]
 
     /// ~2 years back and forward — generous enough nobody hits the edge in practice, cheap since
-    /// only the visible page's 7 glyphs are ever actually rendered.
-    private let weekOffsetRange = -104...104
-    @State private var scrolledWeekOffset: Int?
+    /// only the visible columns are ever actually rendered.
+    private let dayOffsetRange = -730...730
+    @State private var scrolledDayOffset: Int?
 
     private var calendar: Calendar {
         var cal = Calendar.current
@@ -20,69 +24,77 @@ struct WeekStripView: View {
         return cal
     }
 
-    private func weekStart(of date: Date) -> Date {
-        calendar.dateInterval(of: .weekOfYear, for: date)?.start ?? date.startOfDay
+    private var today: Date { Date().startOfDay }
+
+    private func date(forOffset offset: Int) -> Date {
+        calendar.date(byAdding: .day, value: offset, to: today) ?? today
     }
 
-    private var currentWeekStart: Date { weekStart(of: Date()) }
-
-    private func weekStart(forOffset offset: Int) -> Date {
-        calendar.date(byAdding: .day, value: offset * 7, to: currentWeekStart) ?? currentWeekStart
+    private func dayOffset(for date: Date) -> Int {
+        calendar.dateComponents([.day], from: today, to: date.startOfDay).day ?? 0
     }
 
-    private func dates(forOffset offset: Int) -> [Date] {
-        let start = weekStart(forOffset: offset)
-        return (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: start) }
-    }
+    private var selectedDayOffset: Int { dayOffset(for: selectedDate) }
 
-    private var selectedWeekdayIndex: Int {
-        calendar.dateComponents([.day], from: weekStart(of: selectedDate), to: selectedDate.startOfDay).day ?? 0
-    }
-
-    private var selectedWeekOffset: Int {
-        let days = calendar.dateComponents([.day], from: currentWeekStart, to: weekStart(of: selectedDate)).day ?? 0
-        return days / 7
+    private var headingText: String {
+        let relativeLabel: String
+        if calendar.isDateInToday(selectedDate) {
+            relativeLabel = "Today"
+        } else if calendar.isDateInYesterday(selectedDate) {
+            relativeLabel = "Yesterday"
+        } else {
+            relativeLabel = selectedDate.formatted(.dateTime.weekday(.wide))
+        }
+        return "\(relativeLabel), \(selectedDate.formatted(.dateTime.day().month(.wide)))"
     }
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            LazyHStack(spacing: 0) {
-                ForEach(weekOffsetRange, id: \.self) { offset in
-                    weekPage(forOffset: offset)
-                        .containerRelativeFrame(.horizontal)
-                        .id(offset)
+        VStack(spacing: 12) {
+            Text(headingText)
+                .font(.title.bold())
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal)
+                .padding(.top, 8)
+
+            Divider()
+
+            ZStack(alignment: .top) {
+                GeometryReader { geometry in
+                    let columnWidth = geometry.size.width / 7
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        LazyHStack(spacing: 0) {
+                            ForEach(dayOffsetRange, id: \.self) { offset in
+                                dayCell(date(forOffset: offset))
+                                    .frame(width: columnWidth)
+                                    .id(offset)
+                            }
+                        }
+                        .scrollTargetLayout()
+                    }
+                    .scrollTargetBehavior(.viewAligned)
+                    .scrollPosition(id: $scrolledDayOffset, anchor: .center)
+                    .safeAreaPadding(.horizontal, columnWidth * 3)
                 }
+
+                Image(systemName: "arrowtriangle.down.fill")
+                    .font(.system(size: 9))
+                    .foregroundStyle(.secondary)
+                    .allowsHitTesting(false)
             }
-            .scrollTargetLayout()
+            .frame(height: 92)
         }
-        .scrollTargetBehavior(.viewAligned)
-        .scrollPosition(id: $scrolledWeekOffset)
-        .frame(height: 68)
         .onAppear {
-            scrolledWeekOffset = selectedWeekOffset
+            scrolledDayOffset = selectedDayOffset
         }
-        .onChange(of: scrolledWeekOffset) { _, newOffset in
+        .onChange(of: scrolledDayOffset) { _, newOffset in
             guard let newOffset else { return }
-            let newWeekStart = weekStart(forOffset: newOffset)
-            if let newSelected = calendar.date(byAdding: .day, value: selectedWeekdayIndex, to: newWeekStart) {
-                selectedDate = newSelected
-            }
+            selectedDate = date(forOffset: newOffset)
         }
         .onChange(of: selectedDate) { _, _ in
-            if scrolledWeekOffset != selectedWeekOffset {
+            if scrolledDayOffset != selectedDayOffset {
                 withAnimation {
-                    scrolledWeekOffset = selectedWeekOffset
+                    scrolledDayOffset = selectedDayOffset
                 }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func weekPage(forOffset offset: Int) -> some View {
-        HStack(spacing: 0) {
-            ForEach(dates(forOffset: offset), id: \.self) { day in
-                dayCell(day)
-                    .frame(maxWidth: .infinity)
             }
         }
     }
@@ -90,31 +102,27 @@ struct WeekStripView: View {
     @ViewBuilder
     private func dayCell(_ day: Date) -> some View {
         let isSelected = calendar.isDate(day, inSameDayAs: selectedDate)
-        let isToday = calendar.isDateInToday(day)
+        let hasEntries = DayProgressCalculator.dayProgress(for: day, profile: profile, entries: entries).hasEntries
         Button {
             selectedDate = day
         } label: {
-            VStack(spacing: 4) {
+            VStack(spacing: 8) {
                 Text(day.formatted(.dateTime.weekday(.narrow)))
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                DayProgressRingGlyph(
-                    progress: DayProgressCalculator.dayProgress(for: day, profile: profile, entries: entries),
-                    size: 30
-                )
-                .overlay {
-                    if isToday {
-                        Circle().stroke(Color.accentColor, lineWidth: 1.5).padding(-3)
+                    .font(.footnote.weight(.bold))
+                    .foregroundStyle(isSelected ? Color(uiColor: .systemBackground) : .secondary)
+                    .frame(width: 28, height: 28)
+                    .background {
+                        if isSelected {
+                            Circle().fill(Color.primary)
+                        }
                     }
-                }
+                    .padding(.top, 12)
+
+                Circle()
+                    .fill(hasEntries ? Color.accentColor : Color.secondary.opacity(0.25))
+                    .frame(width: 44, height: 44)
             }
-            .padding(.vertical, 6)
             .frame(maxWidth: .infinity)
-            .background {
-                if isSelected {
-                    RoundedRectangle(cornerRadius: 12).fill(Color.accentColor.opacity(0.12))
-                }
-            }
         }
         .buttonStyle(.plain)
         .accessibilityLabel(day.formatted(.dateTime.weekday(.wide).day()))

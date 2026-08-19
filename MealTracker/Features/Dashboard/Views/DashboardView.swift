@@ -75,6 +75,7 @@ struct DashboardView: View {
                 }
             }
             .navigationTitle(navigationTitleText)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
