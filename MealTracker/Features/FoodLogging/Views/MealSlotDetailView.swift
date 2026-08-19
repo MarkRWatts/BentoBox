@@ -6,6 +6,7 @@ private enum FoodLoggingSheet: Identifiable {
     case barcodeScan
     case labelScan
     case manualEntry
+    case copyFromPreviousDay
 
     var id: Self { self }
 }
@@ -69,14 +70,8 @@ struct MealSlotDetailView: View {
         }
         .navigationTitle(navigationTitleText)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    activeSheet = .addFood
-                } label: {
-                    Label("Add Food", systemImage: "plus")
-                }
-            }
+        .overlay(alignment: .bottomTrailing) {
+            addFoodButton
         }
         .sheet(item: $activeSheet) { sheet in
             switch sheet {
@@ -87,6 +82,7 @@ struct MealSlotDetailView: View {
                     onSelectBarcodeScan: { activeSheet = .barcodeScan },
                     onSelectLabelScan: { activeSheet = .labelScan },
                     onSelectManualEntry: { activeSheet = .manualEntry },
+                    onSelectCopyFromPreviousDay: { activeSheet = .copyFromPreviousDay },
                     onLogged: { activeSheet = nil }
                 )
             case .barcodeScan:
@@ -95,6 +91,8 @@ struct MealSlotDetailView: View {
                 LabelScanView(mealSlot: mealSlot, date: date)
             case .manualEntry:
                 ManualFoodEntryView(mealSlot: mealSlot, date: date)
+            case .copyFromPreviousDay:
+                CopyFromPreviousDayView(mealSlot: mealSlot, date: date, onCompleted: { activeSheet = nil })
             }
         }
         .sheet(item: $editingEntry) { entry in
@@ -107,5 +105,22 @@ struct MealSlotDetailView: View {
             modelContext.delete(entries[index])
         }
         try? modelContext.save()
+    }
+
+    private var addFoodButton: some View {
+        Button {
+            activeSheet = .addFood
+        } label: {
+            Image(systemName: "plus")
+                .font(.title2.weight(.semibold))
+                .foregroundStyle(.white)
+                .frame(width: 56, height: 56)
+        }
+        // `.brandForest` rather than `.accentColor` — same dark-mode contrast issue noted
+        // elsewhere: accentColor brightens in dark mode, which combined with the glass
+        // material's translucency left the white "+" too low-contrast to read clearly.
+        .glassEffect(.regular.tint(.brandForest).interactive(), in: Circle())
+        .padding(20)
+        .accessibilityLabel("Add Food")
     }
 }

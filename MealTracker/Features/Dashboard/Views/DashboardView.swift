@@ -100,18 +100,9 @@ struct DashboardView: View {
                 if newPhase == .active { resetToTodayIfNewDay() }
             }
             .onChange(of: goToTodayTrigger) { _, _ in goToToday() }
-            .overlay(alignment: .bottomTrailing) {
-                quickAddButton
-            }
         }
     }
 
-    /// The plan's "primary custom-glass moment" — a floating action button people reach for
-    /// constantly deserves the deliberate Liquid Glass treatment, unlike the dashboard's data
-    /// cards. Kept to a plain Menu (system glass chrome) rather than a custom
-    /// GlassEffectContainer morph animation: a morph is a bigger, higher-risk lift to get right
-    /// without a device to check the animation against, and a plain menu already delivers the
-    /// "reach a meal slot in one tap from anywhere on Today" goal.
     /// The widget extension can't share this app's live SwiftData container, so every time
     /// Today's numbers change we hand it a small snapshot through the shared App Group instead
     /// and nudge WidgetKit to redraw immediately rather than waiting for its own refresh policy.
@@ -162,24 +153,5 @@ struct DashboardView: View {
             path = NavigationPath()
         }
         lastActiveDayStart = today.timeIntervalSince1970
-    }
-
-    private var quickAddButton: some View {
-        Menu {
-            ForEach(mealSlots) { slot in
-                Button(slot.name) { path.append(slot) }
-            }
-        } label: {
-            Image(systemName: "plus")
-                .font(.title2.weight(.semibold))
-                .foregroundStyle(.white)
-                .frame(width: 56, height: 56)
-        }
-        // `.brandForest` rather than `.accentColor` — same dark-mode contrast issue as the
-        // Snack icon: accentColor brightens in dark mode, which combined with the glass
-        // material's translucency left the white "+" too low-contrast to read clearly.
-        .glassEffect(.regular.tint(.brandForest).interactive(), in: Circle())
-        .padding(20)
-        .accessibilityLabel("Log Food")
     }
 }

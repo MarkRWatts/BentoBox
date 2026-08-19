@@ -11,6 +11,7 @@ struct AddFoodView: View {
     var onSelectBarcodeScan: () -> Void
     var onSelectLabelScan: () -> Void
     var onSelectManualEntry: () -> Void
+    var onSelectCopyFromPreviousDay: () -> Void
     var onLogged: () -> Void
 
     @Query(sort: \FoodItem.lastUsedAt, order: .reverse) private var allFoodItems: [FoodItem]
@@ -44,6 +45,9 @@ struct AddFoodView: View {
                         }
                         Button(action: onSelectManualEntry) {
                             Label("Enter Manually", systemImage: "square.and.pencil")
+                        }
+                        Button(action: onSelectCopyFromPreviousDay) {
+                            Label("Copy from Previous Day", systemImage: "clock.arrow.circlepath")
                         }
                     }
 
