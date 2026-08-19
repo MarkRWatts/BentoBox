@@ -4,8 +4,8 @@ import SwiftUI
 /// callers that need many small instances at once (a week strip, a month grid) pay Charts' full
 /// per-instance layout/accessibility overhead for no benefit at that size, and stacking two rings
 /// concentrically is just two `Circle`s rather than coordinating two `SectorMark` series sharing
-/// one canvas. Charts stays the right tool for the app's few large, single-instance rings/pies
-/// (`CalorieSummaryRingView`, the macro pie) where its built-in legend/annotation machinery earns
+/// one canvas. Charts stays the right tool for the app's few large, single-instance pies (e.g.
+/// `MacronutrientsWeekCardView`'s macro pie) where its built-in legend/annotation machinery earns
 /// its keep.
 struct RingProgressView: View {
     /// 0...1, pre-clamped by the caller.

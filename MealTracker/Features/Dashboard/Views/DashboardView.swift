@@ -55,13 +55,6 @@ struct DashboardView: View {
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets())
 
-                Section {
-                    CalorieSummaryRingView(summary: summary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical)
-                }
-                .listRowBackground(Color.clear)
-
                 Section("Macros") {
                     MacroBreakdownView(summary: summary)
                 }

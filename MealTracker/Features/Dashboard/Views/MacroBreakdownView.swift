@@ -3,8 +3,18 @@ import SwiftUI
 struct MacroBreakdownView: View {
     let summary: DashboardViewModel
 
+    private var isOverCalories: Bool { summary.consumedCalories > summary.calorieTarget }
+
     var body: some View {
         VStack(spacing: 12) {
+            MacroRow(
+                name: "Calories",
+                consumed: summary.consumedCalories,
+                target: summary.calorieTarget,
+                color: isOverCalories ? .brandProtein : .accentColor,
+                valueText: "\(Int(summary.consumedCalories)) / \(Int(summary.calorieTarget)) cal",
+                accessibilityUnit: "calories"
+            )
             MacroRow(name: "Protein", consumed: summary.consumedProtein, target: summary.macroTargets.proteinGrams, color: .brandProtein)
             MacroRow(name: "Carbs", consumed: summary.consumedCarbs, target: summary.macroTargets.carbGrams, color: .brandCarbs)
             MacroRow(name: "Fat", consumed: summary.consumedFat, target: summary.macroTargets.fatGrams, color: .brandFat)
@@ -17,6 +27,8 @@ private struct MacroRow: View {
     let consumed: Double
     let target: Double
     let color: Color
+    var valueText: String?
+    var accessibilityUnit: String = "grams"
 
     private var progress: Double {
         guard target > 0 else { return 0 }
@@ -32,7 +44,7 @@ private struct MacroRow: View {
                     .accessibilityHidden(true)
                 Text(name)
                 Spacer()
-                Text("\(Int(consumed))g / \(Int(target))g")
+                Text(valueText ?? "\(Int(consumed))g / \(Int(target))g")
                     .foregroundStyle(.secondary)
             }
             .font(.subheadline)
@@ -42,6 +54,6 @@ private struct MacroRow: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(name)
-        .accessibilityValue("\(Int(consumed)) of \(Int(target)) grams")
+        .accessibilityValue("\(Int(consumed)) of \(Int(target)) \(accessibilityUnit)")
     }
 }
