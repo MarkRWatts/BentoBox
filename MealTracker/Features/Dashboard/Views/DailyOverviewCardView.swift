@@ -1,11 +1,11 @@
 import SwiftUI
 
 /// Hero card for the dashboard — a literal port of the Claude Design "full-width bars" (1a)
-/// calorie-tracker mockup: today's consumed-calorie headline, a trailing 7-day intake strip with
-/// a dashed per-day target line, and a plain-language status line. The mockup only ever shows a
-/// positive ("N left today") state; going over budget isn't something it designed for, so that
-/// case borrows the app's existing `Color.brandProtein` "over" convention (used the same way in
-/// `MacroBreakdownView` and `CaloriesWeekCardView`) rather than inventing an unspecified color.
+/// calorie-tracker mockup: today's consumed-calorie headline and a trailing 7-day intake strip
+/// with a dashed per-day target line. The mockup only ever shows a positive ("N left today")
+/// state; going over budget isn't something it designed for, so that case borrows the app's
+/// existing `Color.brandProtein` "over" convention (used the same way in `MacroBreakdownView` and
+/// `CaloriesWeekCardView`) rather than inventing an unspecified color.
 struct DailyOverviewCardView: View {
     let summary: DashboardViewModel
     /// Oldest to newest, ending on the viewed day.
@@ -29,14 +29,6 @@ struct DailyOverviewCardView: View {
         let loggedDays = recentDayProgress.filter { $0.hasEntries }
         guard !loggedDays.isEmpty else { return 0 }
         return loggedDays.reduce(0) { $0 + $1.caloriesConsumed } / Double(loggedDays.count)
-    }
-
-    private var statusText: String {
-        if isOverBudget { return "Over budget for today." }
-        guard summary.calorieTarget > 0 else { return "" }
-        return summary.remainingCalories >= summary.calorieTarget * 0.5
-            ? "Room for two more meals."
-            : "Room for one more meal."
     }
 
     var body: some View {
@@ -65,19 +57,6 @@ struct DailyOverviewCardView: View {
 
             DailyIntakeBarsView(points: recentDayProgress, selectedDate: selectedDate)
                 .padding(.top, 20)
-
-            if !statusText.isEmpty {
-                Rectangle()
-                    .fill(Color.dashboardDivider)
-                    .frame(height: 1)
-                    .padding(.top, 14)
-                Text(statusText)
-                    .font(.manrope(14, weight: .medium))
-                    .foregroundStyle(Color.dashboardAccent)
-                    .frame(maxWidth: .infinity)
-                    .multilineTextAlignment(.center)
-                    .padding(.top, 16)
-            }
         }
         .padding(.top, 26)
         .padding(.horizontal, 22)
