@@ -74,7 +74,9 @@ struct DashboardView: View {
                     LoggedMealsCardView(
                         mealSlots: mealSlots,
                         selectedDayEntries: selectedDayEntries,
-                        totalCalories: summary.consumedCalories
+                        totalCalories: summary.consumedCalories,
+                        calorieTarget: summary.calorieTarget,
+                        isToday: Calendar.current.isDateInToday(selectedDate)
                     )
                     .padding(.horizontal, 18)
                     .padding(.bottom, 24)
@@ -159,14 +161,24 @@ struct DashboardView: View {
     }
 }
 
+private enum LoggedViewStyle {
+    case byMeal, timeline
+}
+
 /// "Logged" card — a literal port of the mockup's meal list: an uppercase label + running total
 /// above a card of divided rows. Built by hand (rather than a `List` `Section`, which is what the
 /// rest of this screen used before this pass) so the card's corner radius, row insets and divider
-/// styling can match the mockup exactly instead of iOS's fixed inset-grouped chrome.
+/// styling can match the mockup exactly instead of iOS's fixed inset-grouped chrome. A header
+/// toggle (from the Claude Design "Timeline-first" direction, #1c) switches the body between this
+/// by-meal grouping and a chronological thread of the same entries.
 private struct LoggedMealsCardView: View {
     let mealSlots: [MealSlotConfig]
     let selectedDayEntries: [LoggedEntry]
     let totalCalories: Double
+    let calorieTarget: Double
+    let isToday: Bool
+
+    @State private var viewStyle: LoggedViewStyle = .byMeal
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -176,30 +188,81 @@ private struct LoggedMealsCardView: View {
                     .tracking(1.4)
                     .foregroundStyle(Color.dashboardInkSecondary)
                 Spacer()
+                LoggedViewToggle(viewStyle: $viewStyle)
+                Spacer()
                 Text("\(Int(totalCalories)) kcal")
                     .font(.manrope(12, weight: .semibold))
                     .foregroundStyle(Color.dashboardAccent)
             }
             .padding(.horizontal, 4)
 
-            VStack(spacing: 0) {
-                ForEach(Array(mealSlots.enumerated()), id: \.element.id) { index, slot in
-                    NavigationLink(value: slot) {
-                        MealSlotRowView(mealSlot: slot, entries: selectedDayEntries.filter { $0.mealSlot?.id == slot.id })
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.horizontal, 15)
+            switch viewStyle {
+            case .byMeal:
+                MealSlotGroupedListView(mealSlots: mealSlots, selectedDayEntries: selectedDayEntries)
+            case .timeline:
+                EntryTimelineView(
+                    entries: selectedDayEntries.sorted { $0.date < $1.date },
+                    calorieTarget: calorieTarget,
+                    isToday: isToday
+                )
+                .padding(16)
+                .background(Color.dashboardCard, in: RoundedRectangle(cornerRadius: 24))
+            }
+        }
+    }
+}
 
-                    if index < mealSlots.count - 1 {
-                        Rectangle()
-                            .fill(Color.dashboardDivider)
-                            .frame(height: 1)
-                            .padding(.leading, 15 + 44 + 13)
-                    }
+private struct MealSlotGroupedListView: View {
+    let mealSlots: [MealSlotConfig]
+    let selectedDayEntries: [LoggedEntry]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(mealSlots.enumerated()), id: \.element.id) { index, slot in
+                NavigationLink(value: slot) {
+                    MealSlotRowView(mealSlot: slot, entries: selectedDayEntries.filter { $0.mealSlot?.id == slot.id })
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 15)
+
+                if index < mealSlots.count - 1 {
+                    Rectangle()
+                        .fill(Color.dashboardDivider)
+                        .frame(height: 1)
+                        .padding(.leading, 15 + 44 + 13)
                 }
             }
-            .padding(.vertical, 6)
-            .background(Color.dashboardCard, in: RoundedRectangle(cornerRadius: 24))
         }
+        .padding(.vertical, 6)
+        .background(Color.dashboardCard, in: RoundedRectangle(cornerRadius: 24))
+    }
+}
+
+/// Two-icon capsule, styled after the Claude Design mockup's Week/Month segmented toggle (#1e):
+/// a tinted track with the active option raised on a card-colored pill.
+private struct LoggedViewToggle: View {
+    @Binding var viewStyle: LoggedViewStyle
+
+    var body: some View {
+        HStack(spacing: 2) {
+            option(.byMeal, symbol: "list.bullet")
+            option(.timeline, symbol: "clock")
+        }
+        .padding(3)
+        .background(Color.dashboardBarTrack, in: Capsule())
+    }
+
+    private func option(_ style: LoggedViewStyle, symbol: String) -> some View {
+        let isSelected = viewStyle == style
+        return Button {
+            viewStyle = style
+        } label: {
+            Image(systemName: symbol)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(isSelected ? Color.dashboardInk : Color.dashboardInkSecondary)
+                .frame(width: 26, height: 22)
+                .background(isSelected ? Color.dashboardCard : Color.clear, in: Capsule())
+        }
+        .buttonStyle(.plain)
     }
 }
