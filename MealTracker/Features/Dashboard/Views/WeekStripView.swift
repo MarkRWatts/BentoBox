@@ -96,19 +96,35 @@ struct WeekStripView: View {
             ZStack(alignment: .top) {
                 GeometryReader { geometry in
                     let columnWidth = geometry.size.width / 7
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        LazyHStack(spacing: 0) {
-                            ForEach(dayOffsetRange, id: \.self) { offset in
-                                dayCell(date(forOffset: offset))
-                                    .frame(width: columnWidth)
-                                    .id(offset)
+                    ScrollViewReader { proxy in
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            LazyHStack(spacing: 0) {
+                                ForEach(dayOffsetRange, id: \.self) { offset in
+                                    dayCell(date(forOffset: offset))
+                                        .frame(width: columnWidth)
+                                        .id(offset)
+                                }
+                            }
+                            .scrollTargetLayout()
+                        }
+                        .scrollTargetBehavior(.viewAligned)
+                        .scrollPosition(id: $scrolledDayOffset, anchor: .center)
+                        .safeAreaPadding(.horizontal, columnWidth * 3)
+                        .onAppear {
+                            // `.scrollPosition`'s initial positioning is seeded via `init` (see
+                            // above), which is reliable in the Simulator but was still observed
+                            // landing un-centered on a physical device — a `LazyHStack` this long
+                            // (1,461 columns) may not have estimated the target column's offset
+                            // in time for that declarative initial value to apply. Force it
+                            // explicitly once real geometry exists, deferred a tick past the
+                            // current layout pass so `proxy` has something to scroll to.
+                            DispatchQueue.main.async {
+                                if let scrolledDayOffset {
+                                    proxy.scrollTo(scrolledDayOffset, anchor: .center)
+                                }
                             }
                         }
-                        .scrollTargetLayout()
                     }
-                    .scrollTargetBehavior(.viewAligned)
-                    .scrollPosition(id: $scrolledDayOffset, anchor: .center)
-                    .safeAreaPadding(.horizontal, columnWidth * 3)
                 }
 
                 Image(systemName: "arrowtriangle.down.fill")

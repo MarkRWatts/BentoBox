@@ -28,7 +28,7 @@ struct OnboardingFlowView: View {
                     }
                 }
             }
-            .navigationTitle("Set Up re:Track")
+            .navigationTitle("Set Up cal:Track")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 if viewModel.step != .basics {

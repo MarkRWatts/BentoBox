@@ -1,6 +1,6 @@
-# re:Track
+# cal:Track
 
-<img src="MealTracker/Assets.xcassets/AppIcon.appiconset/AppIcon-Light.png" width="120" alt="re:Track app icon" />
+<img src="MealTracker/Assets.xcassets/AppIcon.appiconset/AppIcon-Light.png" width="120" alt="cal:Track app icon" />
 
 A native iOS calorie and meal tracker — barcode scanning, on-device nutrition-label photo scanning, TDEE-based calorie budgeting, configurable meal slots, calorie cycling, BMI/weight tracking, and a Home Screen/Lock Screen widget. All data stays on-device.
 

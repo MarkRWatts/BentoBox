@@ -77,7 +77,7 @@ struct CalorieWidgetView: View {
                 Text("\(Int(snapshot.consumedCalories)) / \(Int(snapshot.targetCalories))")
                     .font(.headline)
             } else {
-                Text("Open re:Track")
+                Text("Open cal:Track")
                     .font(.caption)
             }
         }

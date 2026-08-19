@@ -25,13 +25,13 @@ targets:
     info:
       path: Generated/MealTracker-Info.plist
       properties:
-        CFBundleDisplayName: "re:Track"
+        CFBundleDisplayName: "cal:Track"
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         UISupportedInterfaceOrientations~ipad:
           - UIInterfaceOrientationPortrait
-        NSCameraUsageDescription: "re:Track uses your camera to scan barcodes and nutrition labels."
+        NSCameraUsageDescription: "cal:Track uses your camera to scan barcodes and nutrition labels."
         UIAppFonts:
           - Archivo-Medium.ttf
           - Archivo-SemiBold.ttf
@@ -72,7 +72,7 @@ targets:
     info:
       path: Generated/MealTrackerWidget-Info.plist
       properties:
-        CFBundleDisplayName: "re:Track"
+        CFBundleDisplayName: "cal:Track"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     entitlements:
