@@ -96,6 +96,7 @@ struct ChartsView: View {
             }
             .scrollContentBackground(.hidden)
             .background(Color.dashboardCanvas)
+            .contentMargins(.top, 0, for: .scrollContent)
             .navigationTitle("Trends")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(.hidden, for: .navigationBar)
