@@ -179,6 +179,9 @@ private struct LoggedMealsCardView: View {
     let isToday: Bool
 
     @State private var viewStyle: LoggedViewStyle = .byMeal
+    /// Timeline rows edit inline via this sheet, since (unlike `MealSlotGroupedListView`'s rows)
+    /// they don't already sit behind a `NavigationLink` push into `MealSlotDetailView`.
+    @State private var editingEntry: LoggedEntry?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -203,11 +206,15 @@ private struct LoggedMealsCardView: View {
                 EntryTimelineView(
                     entries: selectedDayEntries.sorted { $0.date < $1.date },
                     calorieTarget: calorieTarget,
-                    isToday: isToday
+                    isToday: isToday,
+                    onSelectEntry: { editingEntry = $0 }
                 )
                 .padding(16)
                 .background(Color.dashboardCard, in: RoundedRectangle(cornerRadius: 24))
             }
+        }
+        .sheet(item: $editingEntry) { entry in
+            EditLoggedEntryView(entry: entry)
         }
     }
 }

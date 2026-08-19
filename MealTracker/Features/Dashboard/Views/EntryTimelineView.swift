@@ -8,6 +8,7 @@ struct EntryTimelineView: View {
     let entries: [LoggedEntry]
     let calorieTarget: Double
     let isToday: Bool
+    let onSelectEntry: (LoggedEntry) -> Void
 
     /// Cycles the same three brand greens the mockup uses for both the budget-rail segments and
     /// their matching dot on the thread below, so a segment's color always identifies its entry.
@@ -70,7 +71,12 @@ struct EntryTimelineView: View {
     private var thread: some View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
-                TimelineEntryRowView(entry: entry, dotColor: color(for: index))
+                Button {
+                    onSelectEntry(entry)
+                } label: {
+                    TimelineEntryRowView(entry: entry, dotColor: color(for: index))
+                }
+                .buttonStyle(.plain)
             }
             if isToday {
                 TimelineNowRowView(lastEntryDate: entries.last?.date)
@@ -125,6 +131,8 @@ private struct TimelineEntryRowView: View {
             }
             .padding(.bottom, 20)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
     }
 }
 
