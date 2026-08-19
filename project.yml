@@ -26,7 +26,7 @@ targets:
       path: Generated/MealTracker-Info.plist
       properties:
         CFBundleDisplayName: "cal:Track"
-        UILaunchScreen: {}
+        UILaunchStoryboardName: "LaunchScreen"
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         UISupportedInterfaceOrientations~ipad:
