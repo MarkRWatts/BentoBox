@@ -11,6 +11,15 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    Text("Settings")
+                        .font(.archivo(30, weight: .semibold))
+                        .foregroundStyle(Color.dashboardInk)
+                }
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets(top: 16, leading: 20, bottom: 4, trailing: 20))
+                .listRowSeparator(.hidden)
+
                 Section("Profile") {
                     LabeledContent("Sex", value: profile.sex.displayName)
                     LabeledContent("Age", value: "\(profile.ageYears)")
@@ -75,6 +84,8 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $isPresentingLogWeight) {
                 LogWeightView(profile: profile)
             }

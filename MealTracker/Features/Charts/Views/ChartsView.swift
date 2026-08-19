@@ -40,6 +40,15 @@ struct ChartsView: View {
         NavigationStack {
             List {
                 Section {
+                    Text("Trends")
+                        .font(.archivo(30, weight: .semibold))
+                        .foregroundStyle(Color.dashboardInk)
+                }
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets(top: 16, leading: 20, bottom: 4, trailing: 20))
+                .listRowSeparator(.hidden)
+
+                Section {
                     Picker("Range", selection: $rangeDays) {
                         Text("7 Days").tag(7)
                         Text("30 Days").tag(30)
@@ -88,6 +97,8 @@ struct ChartsView: View {
             .scrollContentBackground(.hidden)
             .background(Color.dashboardCanvas)
             .navigationTitle("Trends")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .navigationBar)
         }
     }
 }
