@@ -7,10 +7,12 @@ import UIKit
 /// counterpart (same hue, inverted lightness) so the redesigned Dashboard still works in dark
 /// mode instead of just going literal-only in light mode.
 extension Color {
-    /// Page canvas behind the cards. Mockup: #eef7f1.
-    static let dashboardCanvas = adaptive(light: 0xEEF7F1, dark: 0x0E1712)
-    /// Card surfaces. Mockup: #ffffff.
-    static let dashboardCard = adaptive(light: 0xFFFFFF, dark: 0x16211B)
+    /// Page canvas behind the cards. Mockup: #eef7f1. Dark uses Apple's standard system black
+    /// rather than a tinted dark green so the app matches the platform's normal dark mode look.
+    static let dashboardCanvas = adaptive(light: 0xEEF7F1, dark: 0x000000)
+    /// Card surfaces. Mockup: #ffffff. Dark uses Apple's standard `secondarySystemBackground`
+    /// gray (#1c1c1e) instead of a tinted dark green, to match `dashboardCanvas`.
+    static let dashboardCard = adaptive(light: 0xFFFFFF, dark: 0x1C1C1E)
 
     /// Headline ink (big numbers, names). Mockup: #10261d.
     static let dashboardInk = adaptive(light: 0x10261D, dark: 0xF1FBF5)
