@@ -25,6 +25,7 @@ struct EditLoggedEntryView: View {
     @State private var sugarGrams: Double
     @State private var sodiumMg: Double
     @State private var quantity: Double
+    @State private var date: Date
 
     init(entry: LoggedEntry) {
         self.entry = entry
@@ -41,6 +42,7 @@ struct EditLoggedEntryView: View {
         _sugarGrams = State(initialValue: foodItem?.sugarGramsPerServing ?? 0)
         _sodiumMg = State(initialValue: foodItem?.sodiumMgPerServing ?? 0)
         _quantity = State(initialValue: entry.quantity)
+        _date = State(initialValue: entry.date)
     }
 
     /// Prefers the original FoodItem's own known gram basis — more reliable than re-parsing the
@@ -98,6 +100,14 @@ struct EditLoggedEntryView: View {
                 Section("Quantity") {
                     PortionQuantityField(quantity: $quantity, servingSizeGrams: servingSizeGrams)
                 }
+
+                Section {
+                    DatePicker("Time", selection: $date, displayedComponents: .hourAndMinute)
+                } header: {
+                    Text("Logged At")
+                } footer: {
+                    Text("Only the time can be changed — the entry stays logged on \(entry.date.formatted(.dateTime.month(.wide).day())).")
+                }
             }
             .navigationTitle("Edit Entry")
             .navigationBarTitleDisplayMode(.inline)
@@ -117,6 +127,15 @@ struct EditLoggedEntryView: View {
 
     private func save() {
         entry.quantity = quantity
+        // `date` only ever has its hour/minute/second edited (see the `.hourAndMinute` picker
+        // above), so re-anchoring it to the original day guards against `DatePicker` drifting
+        // the day component via DST or timezone edge cases.
+        entry.date = Calendar.current.date(
+            bySettingHour: Calendar.current.component(.hour, from: date),
+            minute: Calendar.current.component(.minute, from: date),
+            second: 0,
+            of: entry.date
+        ) ?? entry.date
 
         if hasNutritionChanges() {
             let previousFoodItem = entry.foodItem

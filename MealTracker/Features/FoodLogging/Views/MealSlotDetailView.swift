@@ -94,7 +94,7 @@ struct MealSlotDetailView: View {
             case .addFood:
                 AddFoodView(
                     mealSlot: mealSlot,
-                    date: date,
+                    date: date.atCurrentTimeOfDay,
                     onSelectBarcodeScan: { activeSheet = .barcodeScan },
                     onSelectLabelScan: { activeSheet = .labelScan },
                     onSelectManualEntry: { activeSheet = .manualEntry },
@@ -102,11 +102,11 @@ struct MealSlotDetailView: View {
                     onLogged: { activeSheet = nil }
                 )
             case .barcodeScan:
-                BarcodeScanView(mealSlot: mealSlot, date: date)
+                BarcodeScanView(mealSlot: mealSlot, date: date.atCurrentTimeOfDay)
             case .labelScan:
-                LabelScanView(mealSlot: mealSlot, date: date)
+                LabelScanView(mealSlot: mealSlot, date: date.atCurrentTimeOfDay)
             case .manualEntry:
-                ManualFoodEntryView(mealSlot: mealSlot, date: date)
+                ManualFoodEntryView(mealSlot: mealSlot, date: date.atCurrentTimeOfDay)
             case .copyFromPreviousDay:
                 CopyFromPreviousDayView(mealSlot: mealSlot, date: date, onCompleted: { activeSheet = nil })
             }
