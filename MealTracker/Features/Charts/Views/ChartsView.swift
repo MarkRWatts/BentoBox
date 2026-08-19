@@ -63,11 +63,13 @@ struct ChartsView: View {
                     StreakCardView(streakDays: summary.currentStreakDays)
                 }
                 .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets())
 
                 Section {
                     VerdictCardView(insights: weeklyInsights, target: summary.calorieTarget, weightUnit: profile.weightUnit)
                 }
                 .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets())
 
                 Section("Body") {
                     NavigationLink {
@@ -132,6 +134,7 @@ private struct StreakCardView: View {
             Spacer()
         }
         .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.dashboardCard, in: RoundedRectangle(cornerRadius: 20))
         .accessibilityElement(children: .combine)
     }
