@@ -28,8 +28,10 @@ struct OnboardingGoalStepView: View {
             }
 
             Section {
-                Button("Next") { viewModel.goNext() }
+                OnboardingContinueButton(title: "Next", action: viewModel.goNext)
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(Color.dashboardCanvas)
     }
 }

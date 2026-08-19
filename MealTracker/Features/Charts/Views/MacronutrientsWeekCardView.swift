@@ -17,7 +17,8 @@ struct MacronutrientsWeekCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Macronutrients")
-                .font(.headline)
+                .font(.archivo(17, weight: .semibold))
+                .foregroundStyle(Color.dashboardInk)
 
             HStack(alignment: .center, spacing: 20) {
                 VStack(alignment: .leading, spacing: 8) {
@@ -60,15 +61,15 @@ struct MacronutrientsWeekCardView: View {
 
             HStack(spacing: 8) {
                 Text("AVG")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .font(.manrope(11, weight: .bold))
+                    .foregroundStyle(Color.dashboardInkSecondary)
                 MacroPercentChip(color: .brandFat, percent: averagePercents.fat)
                 MacroPercentChip(color: .brandCarbs, percent: averagePercents.carbs)
                 MacroPercentChip(color: .brandProtein, percent: averagePercents.protein)
             }
         }
         .padding()
-        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 16))
+        .background(Color.dashboardCard, in: RoundedRectangle(cornerRadius: 20))
         .accessibilityElement(children: .combine)
     }
 }
@@ -82,11 +83,12 @@ private struct MacroLegendRow: View {
         HStack(spacing: 6) {
             Circle().fill(color).frame(width: 8, height: 8)
             Text(name)
-                .font(.caption2)
+                .font(.manrope(11, weight: .medium))
+                .foregroundStyle(Color.dashboardInk)
             Spacer(minLength: 4)
             Text("\(Int(percent.rounded()))%")
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(.secondary)
+                .font(.manrope(11, weight: .semibold))
+                .foregroundStyle(Color.dashboardInkSecondary)
         }
     }
 }
@@ -133,13 +135,13 @@ private struct MacroDayStackView: View {
                 .frame(height: barMaxHeight, alignment: .bottom)
             } else {
                 RoundedRectangle(cornerRadius: 4)
-                    .fill(Color.secondary.opacity(0.15))
+                    .fill(Color.dashboardBarTrack)
                     .frame(width: barWidth, height: barMaxHeight)
             }
 
             Text(point.date.formatted(.dateTime.weekday(.narrow)))
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(Calendar.current.isDateInToday(point.date) ? .primary : .secondary)
+                .font(.manrope(10, weight: .semibold))
+                .foregroundStyle(Calendar.current.isDateInToday(point.date) ? Color.dashboardAccentDeep : Color.dashboardInkFaint)
         }
     }
 }

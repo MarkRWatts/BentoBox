@@ -32,9 +32,7 @@ struct ManualFoodEntryView: View {
                 }
 
                 Section("Quantity") {
-                    Stepper(value: $viewModel.quantity, in: 0.25...20, step: 0.25) {
-                        Text("Servings: \(viewModel.quantity, specifier: "%.2f")")
-                    }
+                    PortionQuantityField(quantity: $viewModel.quantity, servingSizeGrams: viewModel.servingSizeGrams)
                 }
             }
             .navigationTitle("Add to \(mealSlot.name)")

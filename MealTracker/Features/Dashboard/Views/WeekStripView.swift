@@ -2,36 +2,58 @@ import SwiftUI
 import UIKit
 
 /// Continuously scrollable day strip styled after the Apple Health day picker: a big
-/// relative-date heading, then a caret fixed at the horizontal center with a row of weekday
-/// initials and a row of dots (filled when that day has logged entries, matching
-/// `MonthCalendarView`'s dots) scrolling underneath it. Scrolling changes which day sits under
-/// the fixed caret, snapping one day at a time, rather than paging whole calendar weeks.
-/// Monday-first is hardcoded (not the device locale's first weekday) to match the Mon–Sun layout
-/// used throughout this feature.
+/// relative-date heading (with the calendar-picker button on the same line, rather than
+/// duplicating the date again in the navigation bar above it), then a caret fixed at the
+/// horizontal center with a row of weekday initials and a row of dots (filled when that day has
+/// logged entries, matching `MonthCalendarView`'s dots) scrolling underneath it. Scrolling
+/// changes which day sits under the fixed caret, snapping one day at a time, rather than paging
+/// whole calendar weeks. Monday-first is hardcoded (not the device locale's first weekday) to
+/// match the Mon–Sun layout used throughout this feature.
 struct WeekStripView: View {
     @Binding var selectedDate: Date
     let profile: UserProfile
     let entries: [LoggedEntry]
+    var onTapCalendar: () -> Void
 
     /// ~2 years back and forward — generous enough nobody hits the edge in practice, cheap since
     /// only the visible columns are ever actually rendered.
     private let dayOffsetRange = -730...730
     @State private var scrolledDayOffset: Int?
 
-    private var calendar: Calendar {
+    init(selectedDate: Binding<Date>, profile: UserProfile, entries: [LoggedEntry], onTapCalendar: @escaping () -> Void) {
+        self._selectedDate = selectedDate
+        self.profile = profile
+        self.entries = entries
+        self.onTapCalendar = onTapCalendar
+        // Seeded directly as the initial `@State` value rather than assigned in `.onAppear` —
+        // `.scrollPosition(id:anchor:.center)` needs `scrolledDayOffset` already populated before
+        // the scroll view's very first layout pass to center on it reliably. Setting it in
+        // `.onAppear` races that first layout (which itself waits on the `GeometryReader`-derived
+        // column width) and would silently leave the strip un-centered on a cold launch.
+        self._scrolledDayOffset = State(initialValue: Self.dayOffset(for: selectedDate.wrappedValue))
+    }
+
+    private static var calendar: Calendar {
         var cal = Calendar.current
         cal.firstWeekday = 2
         return cal
     }
 
-    private var today: Date { Date().startOfDay }
+    private static var today: Date { Date().startOfDay }
+
+    private static func dayOffset(for date: Date) -> Int {
+        calendar.dateComponents([.day], from: today, to: date.startOfDay).day ?? 0
+    }
+
+    private var calendar: Calendar { Self.calendar }
+    private var today: Date { Self.today }
 
     private func date(forOffset offset: Int) -> Date {
         calendar.date(byAdding: .day, value: offset, to: today) ?? today
     }
 
     private func dayOffset(for date: Date) -> Int {
-        calendar.dateComponents([.day], from: today, to: date.startOfDay).day ?? 0
+        Self.dayOffset(for: date)
     }
 
     private var selectedDayOffset: Int { dayOffset(for: selectedDate) }
@@ -50,13 +72,26 @@ struct WeekStripView: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            Text(headingText)
-                .font(.title.bold())
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal)
-                .padding(.top, 8)
+            HStack(alignment: .center) {
+                Text(headingText)
+                    .font(.archivo(30, weight: .semibold))
+                    .foregroundStyle(Color.dashboardInk)
+                Spacer()
+                Button(action: onTapCalendar) {
+                    Image(systemName: "calendar")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(Color.dashboardAccent)
+                        .frame(width: 38, height: 38)
+                        .background(Color.dashboardCard, in: Circle())
+                }
+                .accessibilityLabel("Choose Date")
+            }
+            .padding(.horizontal)
+            .padding(.top, 16)
 
-            Divider()
+            Rectangle()
+                .fill(Color.dashboardDivider)
+                .frame(height: 1)
 
             ZStack(alignment: .top) {
                 GeometryReader { geometry in
@@ -83,9 +118,6 @@ struct WeekStripView: View {
             }
             .frame(height: 92)
         }
-        .onAppear {
-            scrolledDayOffset = selectedDayOffset
-        }
         .onChange(of: scrolledDayOffset) { _, newOffset in
             guard let newOffset else { return }
             selectedDate = date(forOffset: newOffset)
@@ -108,18 +140,18 @@ struct WeekStripView: View {
         } label: {
             VStack(spacing: 8) {
                 Text(day.formatted(.dateTime.weekday(.narrow)))
-                    .font(.footnote.weight(.bold))
-                    .foregroundStyle(isSelected ? Color(uiColor: .systemBackground) : .secondary)
+                    .font(.manrope(13, weight: .bold))
+                    .foregroundStyle(isSelected ? Color.dashboardCard : Color.dashboardInkSecondary)
                     .frame(width: 28, height: 28)
                     .background {
                         if isSelected {
-                            Circle().fill(Color.primary)
+                            Circle().fill(Color.dashboardInk)
                         }
                     }
                     .padding(.top, 12)
 
                 Circle()
-                    .fill(hasEntries ? Color.accentColor : Color.secondary.opacity(0.25))
+                    .fill(hasEntries ? Color.dashboardAccent : Color.dashboardBarTrack)
                     .frame(width: 44, height: 44)
             }
             .frame(maxWidth: .infinity)

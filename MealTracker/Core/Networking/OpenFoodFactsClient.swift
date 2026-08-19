@@ -16,7 +16,7 @@ struct OpenFoodFactsClient {
             resolvingAgainstBaseURL: false
         )
         components?.queryItems = [
-            URLQueryItem(name: "fields", value: "code,status,product_name,brands,serving_size,nutriments")
+            URLQueryItem(name: "fields", value: "code,status,product_name,brands,serving_size,nutriments,image_front_thumb_url,image_front_url")
         ]
         guard let url = components?.url else {
             throw NetworkError.invalidResponse
@@ -29,16 +29,28 @@ struct OpenFoodFactsClient {
     /// Text search by product name/brand — unlike `fetchProduct`, this can return many results,
     /// each carrying its own `code` (barcode) so a picked result can be cached/logged the same
     /// way a barcode scan match is.
-    func searchProducts(query: String) async throws -> [OFFProduct] {
+    ///
+    /// `countryName` narrows results to that country's catalog via OFF's `countries_tags_en`
+    /// filter, which matches on the country's *English* tag name (confirmed against the live
+    /// API — e.g. `countries_tags_en=Norway`). Callers should resolve this from
+    /// `UserProfile.resolvedFoodSearchCountryName`. Note OFF's own country tag names don't
+    /// always match Apple's `Locale` English names exactly (e.g. "Czechia" vs "Czech Republic"),
+    /// which silently yields zero/wrong-country results for the mismatched few rather than an
+    /// error — an accepted limitation rather than something worth taxonomy-matching at runtime.
+    func searchProducts(query: String, countryName: String? = nil) async throws -> [OFFProduct] {
         var components = URLComponents(url: searchURL, resolvingAgainstBaseURL: false)
-        components?.queryItems = [
+        var queryItems = [
             URLQueryItem(name: "search_terms", value: query),
             URLQueryItem(name: "search_simple", value: "1"),
             URLQueryItem(name: "action", value: "process"),
             URLQueryItem(name: "json", value: "1"),
             URLQueryItem(name: "page_size", value: "20"),
-            URLQueryItem(name: "fields", value: "code,product_name,brands,serving_size,nutriments")
+            URLQueryItem(name: "fields", value: "code,product_name,brands,serving_size,nutriments,image_front_thumb_url,image_front_url")
         ]
+        if let countryName {
+            queryItems.append(URLQueryItem(name: "countries_tags_en", value: countryName))
+        }
+        components?.queryItems = queryItems
         guard let url = components?.url else {
             throw NetworkError.invalidResponse
         }

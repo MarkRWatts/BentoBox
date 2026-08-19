@@ -56,7 +56,7 @@ struct ChartsView: View {
                 .listRowBackground(Color.clear)
 
                 Section {
-                    InsightsCardView(insights: weeklyInsights, weightUnit: profile.weightUnit)
+                    VerdictCardView(insights: weeklyInsights, target: summary.calorieTarget, weightUnit: profile.weightUnit)
                 }
                 .listRowBackground(Color.clear)
 
@@ -72,6 +72,7 @@ struct ChartsView: View {
                         BMISummaryRowView(profile: profile)
                     }
                 }
+                .listRowBackground(Color.dashboardCard)
 
                 Section {
                     WeekNavigationHeaderView(
@@ -84,6 +85,8 @@ struct ChartsView: View {
                 }
                 .listRowBackground(Color.clear)
             }
+            .scrollContentBackground(.hidden)
+            .background(Color.dashboardCanvas)
             .navigationTitle("Trends")
         }
     }
@@ -101,45 +104,81 @@ private struct StreakCardView: View {
                 .background(Color.orange.gradient, in: RoundedRectangle(cornerRadius: 12))
             VStack(alignment: .leading) {
                 Text("\(streakDays) day\(streakDays == 1 ? "" : "s")")
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .font(.archivo(22, weight: .semibold))
+                    .foregroundStyle(Color.dashboardInk)
                 Text(streakDays > 0 ? "Logging streak" : "Log a meal to start a streak")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.manrope(12, weight: .medium))
+                    .foregroundStyle(Color.dashboardInkSecondary)
             }
             Spacer()
         }
         .padding()
-        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 16))
+        .background(Color.dashboardCard, in: RoundedRectangle(cornerRadius: 20))
         .accessibilityElement(children: .combine)
     }
 }
 
-private struct InsightsCardView: View {
+/// A literal port of the Claude Design mockup's "Weekly progress" screen (1e) hero: a
+/// plain-language verdict sentence over two headline stats, on the same dark-emerald surface as
+/// the mockup rather than a neutral card — matching `Color.dashboardAccentDeep`'s role elsewhere
+/// (the Dashboard's "today" bar/weekday, the Add Food floating button).
+private struct VerdictCardView: View {
     let insights: WeeklyInsights
+    let target: Double
     let weightUnit: WeightUnit
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("This Week")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
+    private var onTrackDays: Int { insights.daysOnTarget + insights.daysUnderTarget }
+    private var totalDays: Int { onTrackDays + insights.daysOverTarget }
 
-            HStack(spacing: 20) {
-                InsightStatView(value: "\(insights.daysOnTarget + insights.daysUnderTarget)", label: "on track", color: .accentColor)
-                InsightStatView(value: "\(insights.daysOverTarget)", label: "over target", color: .brandProtein)
-                InsightStatView(value: "\(Int(insights.averagePercentOfTarget))%", label: "avg of target", color: .brandCarbs)
-                Spacer()
+    private var verdictSentence: String {
+        guard totalDays > 0 else { return "Log a few days to see your weekly verdict." }
+        return "You stayed inside your budget \(onTrackDays) day\(onTrackDays == 1 ? "" : "s") out of \(totalDays)."
+    }
+
+    private var vsTargetDelta: Double { insights.averageCalories - target }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("VERDICT")
+                .font(.manrope(10, weight: .bold))
+                .tracking(1.4)
+                .foregroundStyle(.white.opacity(0.6))
+
+            Text(verdictSentence)
+                .font(.archivo(26, weight: .semibold))
+                .foregroundStyle(.white)
+
+            if totalDays > 0 {
+                HStack(spacing: 26) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("\(Int(insights.averageCalories))")
+                            .font(.archivo(24, weight: .semibold))
+                            .foregroundStyle(Color.dashboardOnAccent)
+                        Text("avg / day")
+                            .font(.manrope(10.5, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.65))
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(vsTargetDelta <= 0 ? "−\(Int(abs(vsTargetDelta)))" : "+\(Int(vsTargetDelta))")
+                            .font(.archivo(24, weight: .semibold))
+                            .foregroundStyle(Color.dashboardOnAccent)
+                        Text("vs target")
+                            .font(.manrope(10.5, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.65))
+                    }
+                }
             }
 
             if let weightChangeKG = insights.weightChangeKG {
-                Divider()
+                Rectangle().fill(.white.opacity(0.15)).frame(height: 1)
                 Label(weightTrendDescription(deltaKG: weightChangeKG), systemImage: weightChangeKG <= 0 ? "arrow.down.right" : "arrow.up.right")
-                    .font(.subheadline)
-                    .foregroundStyle(weightChangeKG <= 0 ? Color.accentColor : Color.brandProtein)
+                    .font(.manrope(12.5, weight: .medium))
+                    .foregroundStyle(Color.dashboardOnAccent)
             }
         }
-        .padding()
-        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 16))
+        .padding(22)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.dashboardAccentDeep, in: RoundedRectangle(cornerRadius: 28))
         .accessibilityElement(children: .combine)
     }
 
@@ -148,23 +187,6 @@ private struct InsightsCardView: View {
         guard magnitude >= 0.1 else { return "Weight steady this week" }
         let direction = deltaKG < 0 ? "down" : "up"
         return "Weight \(direction) \(weightUnit.displayString(fromKG: magnitude)) this week"
-    }
-}
-
-private struct InsightStatView: View {
-    let value: String
-    let label: String
-    let color: Color
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(value)
-                .font(.system(size: 20, weight: .bold, design: .rounded))
-                .foregroundStyle(color)
-            Text(label)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
     }
 }
 
@@ -238,8 +260,8 @@ private struct WeekNavigationHeaderView: View {
             }
             Spacer()
             Text(rangeText)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .font(.manrope(13, weight: .semibold))
+                .foregroundStyle(Color.dashboardInkSecondary)
             Spacer()
             Button(action: onNext) {
                 Image(systemName: "chevron.right")

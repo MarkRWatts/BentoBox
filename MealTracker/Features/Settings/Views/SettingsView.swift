@@ -44,6 +44,15 @@ struct SettingsView: View {
                     LabeledContent("Calories", value: "\(Int(TDEECalculator.dailyCalorieTarget(for: profile)))")
                 }
 
+                Section("Food Search") {
+                    Picker("Country", selection: $profile.foodSearchCountryCode) {
+                        Text("Automatic").tag(String?.none)
+                        ForEach(CountryOption.all) { option in
+                            Text(option.englishName).tag(String?.some(option.code))
+                        }
+                    }
+                }
+
                 Section {
                     NavigationLink {
                         MealSlotEditorView(profile: profile)

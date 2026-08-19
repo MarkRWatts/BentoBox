@@ -48,26 +48,42 @@ struct MealSlotDetailView: View {
             Section {
                 if entries.isEmpty {
                     Text("No food logged yet.")
-                        .foregroundStyle(.secondary)
+                        .font(.manrope(14, weight: .medium))
+                        .foregroundStyle(Color.dashboardInkSecondary)
                 }
                 ForEach(entries) { entry in
                     Button {
                         editingEntry = entry
                     } label: {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(entry.foodItem?.name ?? "Unknown Food")
-                                .foregroundStyle(.primary)
-                            Text("\(entry.quantity, specifier: "%.2f") × \(entry.foodItem?.servingSizeDescription ?? "") — \(Int(entry.calories)) cal")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                        HStack(spacing: 12) {
+                            FoodThumbnailView(
+                                urlString: entry.foodItem?.imageURLString,
+                                shape: RoundedRectangle(cornerRadius: 12),
+                                placeholderColor: .dashboardBarTrack,
+                                size: 40
+                            )
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(entry.foodItem?.name ?? "Unknown Food")
+                                    .font(.manrope(14, weight: .semibold))
+                                    .foregroundStyle(Color.dashboardInk)
+                                Text("\(entry.quantity, specifier: "%.2f") × \(entry.foodItem?.servingSizeDescription ?? "") — \(Int(entry.calories)) cal")
+                                    .font(.manrope(11.5, weight: .medium))
+                                    .foregroundStyle(Color.dashboardInkSecondary)
+                            }
                         }
                     }
+                    .listRowBackground(Color.dashboardCard)
                 }
                 .onDelete(perform: deleteEntries)
             } header: {
-                Text("\(Int(totalCalories)) calories logged")
+                Text("\(Int(totalCalories)) CALORIES LOGGED")
+                    .font(.manrope(10, weight: .bold))
+                    .tracking(1.4)
+                    .foregroundStyle(Color.dashboardAccent)
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(Color.dashboardCanvas)
         .navigationTitle(navigationTitleText)
         .navigationBarTitleDisplayMode(.inline)
         .overlay(alignment: .bottomTrailing) {
@@ -116,10 +132,10 @@ struct MealSlotDetailView: View {
                 .foregroundStyle(.white)
                 .frame(width: 56, height: 56)
         }
-        // `.brandForest` rather than `.accentColor` — same dark-mode contrast issue noted
-        // elsewhere: accentColor brightens in dark mode, which combined with the glass
+        // `.dashboardAccentDeep` rather than `.accentColor` — same dark-mode contrast issue
+        // noted elsewhere: accentColor brightens in dark mode, which combined with the glass
         // material's translucency left the white "+" too low-contrast to read clearly.
-        .glassEffect(.regular.tint(.brandForest).interactive(), in: Circle())
+        .glassEffect(.regular.tint(.dashboardAccentDeep).interactive(), in: Circle())
         .padding(20)
         .accessibilityLabel("Add Food")
     }

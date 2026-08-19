@@ -20,6 +20,11 @@ enum OpenFoodFactsMapper {
         let n = product.nutriments
 
         let servingDescription: String
+        /// The gram basis 1x `quantity` actually represents — distinct from the raw
+        /// `servingGrams` local above, which only reflects whether the *label* serving size was
+        /// gram-parseable. The 100g-fallback branch reports a known basis (100g) even though no
+        /// label serving size existed to parse.
+        let resolvedServingGrams: Double?
         let calories: Double
         let protein: Double
         let carbs: Double
@@ -31,6 +36,7 @@ enum OpenFoodFactsMapper {
         if let n, n.energyKcalServing != nil {
             // Contributor supplied per-serving values directly — most accurate, prefer these.
             servingDescription = product.servingSize ?? "1 serving"
+            resolvedServingGrams = servingGrams
             calories = n.energyKcalServing ?? 0
             protein = n.proteinsServing ?? 0
             carbs = n.carbohydratesServing ?? 0
@@ -42,6 +48,7 @@ enum OpenFoodFactsMapper {
             // Scale OFF's standard per-100g figures down to the labeled serving size.
             let scale = grams / 100.0
             servingDescription = product.servingSize ?? "\(Int(grams)) g"
+            resolvedServingGrams = grams
             calories = (n.energyKcal100g ?? 0) * scale
             protein = (n.proteins100g ?? 0) * scale
             carbs = (n.carbohydrates100g ?? 0) * scale
@@ -52,6 +59,7 @@ enum OpenFoodFactsMapper {
         } else if let n {
             // No serving size on the label — fall back to reporting per 100g as-is.
             servingDescription = "100 g"
+            resolvedServingGrams = 100
             calories = n.energyKcal100g ?? 0
             protein = n.proteins100g ?? 0
             carbs = n.carbohydrates100g ?? 0
@@ -61,6 +69,7 @@ enum OpenFoodFactsMapper {
             sodiumMg = n.sodium100g.map { $0 * 1000 }
         } else {
             servingDescription = "1 serving"
+            resolvedServingGrams = nil
             calories = 0
             protein = 0
             carbs = 0
@@ -75,7 +84,7 @@ enum OpenFoodFactsMapper {
             brand: resolvedBrand,
             barcode: barcode,
             servingSizeDescription: servingDescription,
-            servingSizeGrams: servingGrams,
+            servingSizeGrams: resolvedServingGrams,
             caloriesPerServing: calories,
             proteinGramsPerServing: protein,
             carbGramsPerServing: carbs,
@@ -83,11 +92,15 @@ enum OpenFoodFactsMapper {
             fiberGramsPerServing: fiber,
             sugarGramsPerServing: sugar,
             sodiumMgPerServing: sodiumMg,
+            imageURLString: product.imageThumbURL,
+            imageDetailURLString: product.imageFrontURL,
             source: .openFoodFacts
         )
     }
 
-    /// Extracts the leading number from strings like "30 g" or "1 bar (30g)".
+    /// Extracts the leading number from strings like "30 g" or "1 bar (30g)". Intended for Open
+    /// Food Facts' own `serving_size` field, which by convention is a gram/ml quantity — a
+    /// leading digit reliably means grams there.
     static func parseGrams(from servingSize: String?) -> Double? {
         guard let servingSize else { return nil }
         var numberString = ""
@@ -101,5 +114,21 @@ enum OpenFoodFactsMapper {
             }
         }
         return Double(numberString)
+    }
+
+    /// Stricter than `parseGrams`: only returns a figure when the *entire* trimmed string is a
+    /// number followed by a gram unit ("30 g", "245g", "100 grams"). Use this instead of
+    /// `parseGrams` against free-form user-typed serving size text — unlike Open Food Facts'
+    /// dedicated `serving_size` field, a user's text can start with a digit that isn't grams at
+    /// all ("2 slices", "1 serving"), and `parseGrams` would misread that as a gram figure.
+    static func parseExactGrams(from text: String) -> Double? {
+        let trimmed = text.trimmingCharacters(in: .whitespaces).lowercased()
+        for suffix in ["grams", "gram", "g"] {
+            guard trimmed.hasSuffix(suffix) else { continue }
+            if let value = Double(trimmed.dropLast(suffix.count).trimmingCharacters(in: .whitespaces)) {
+                return value
+            }
+        }
+        return nil
     }
 }

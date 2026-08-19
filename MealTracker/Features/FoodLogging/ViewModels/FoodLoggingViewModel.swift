@@ -27,12 +27,20 @@ final class FoodLoggingViewModel {
         !name.trimmingCharacters(in: .whitespaces).isEmpty && calories >= 0
     }
 
+    /// Live-derived from the free-text serving field — typing e.g. "30g" here activates
+    /// gram-based quantity entry the same way an Open Food Facts item with a parseable label
+    /// serving size does, with no separate state to keep in sync.
+    var servingSizeGrams: Double? {
+        OpenFoodFactsMapper.parseExactGrams(from: servingSizeDescription)
+    }
+
     func saveEntry(mealSlot: MealSlotConfig, date: Date = Date(), context: ModelContext) {
         let foodItem = FoodItem(
             name: name.trimmingCharacters(in: .whitespaces),
             brand: brand.isEmpty ? nil : brand,
             barcode: barcode,
             servingSizeDescription: servingSizeDescription,
+            servingSizeGrams: servingSizeGrams,
             caloriesPerServing: calories,
             proteinGramsPerServing: proteinGrams,
             carbGramsPerServing: carbGrams,

@@ -32,6 +32,15 @@ targets:
         UISupportedInterfaceOrientations~ipad:
           - UIInterfaceOrientationPortrait
         NSCameraUsageDescription: "re:Track uses your camera to scan barcodes and nutrition labels."
+        UIAppFonts:
+          - Archivo-Medium.ttf
+          - Archivo-SemiBold.ttf
+          - Archivo-Bold.ttf
+          - Manrope-Regular.ttf
+          - Manrope-Medium.ttf
+          - Manrope-SemiBold.ttf
+          - Manrope-Bold.ttf
+          - Manrope-ExtraBold.ttf
     entitlements:
       path: Generated/MealTracker.entitlements
       properties:

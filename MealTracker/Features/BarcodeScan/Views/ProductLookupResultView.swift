@@ -10,8 +10,27 @@ struct ProductLookupResultView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var quantity: Double = 1
 
+    /// Prefers the larger detail-size photo over the list-row thumbnail — nothing shows at all
+    /// for manual/label-scanned items with no source photo.
+    private var displayImageURLString: String? {
+        foodItem.imageDetailURLString ?? foodItem.imageURLString
+    }
+
     var body: some View {
         Form {
+            if let displayImageURLString {
+                Section {
+                    FoodThumbnailView(
+                        urlString: displayImageURLString,
+                        shape: RoundedRectangle(cornerRadius: 16),
+                        placeholderColor: .dashboardBarTrack,
+                        size: 120
+                    )
+                    .frame(maxWidth: .infinity)
+                    .listRowBackground(Color.clear)
+                }
+            }
+
             Section("Product") {
                 LabeledContent("Name", value: foodItem.name)
                 if let brand = foodItem.brand {
@@ -28,9 +47,7 @@ struct ProductLookupResultView: View {
             }
 
             Section("Quantity") {
-                Stepper(value: $quantity, in: 0.25...20, step: 0.25) {
-                    Text("Servings: \(quantity, specifier: "%.2f")")
-                }
+                PortionQuantityField(quantity: $quantity, servingSizeGrams: foodItem.servingSizeGrams)
             }
 
             Section {

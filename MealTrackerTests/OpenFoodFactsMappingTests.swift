@@ -78,6 +78,9 @@ struct OpenFoodFactsMappingTests {
 
         #expect(foodItem.servingSizeDescription == "100 g")
         #expect(foodItem.caloriesPerServing == 130)
+        // The 100g-fallback basis must be reported explicitly, not left nil, or downstream
+        // gram-based quantity entry has no basis to convert against.
+        #expect(foodItem.servingSizeGrams == 100)
     }
 
     @Test func returnsNilWhenStatusIsNotFound() throws {
@@ -157,5 +160,17 @@ struct OpenFoodFactsMappingTests {
         #expect(OpenFoodFactsMapper.parseGrams(from: "1 bar (45.5g)") == 1) // takes the leading number, not the parenthetical
         #expect(OpenFoodFactsMapper.parseGrams(from: "45.5g") == 45.5)
         #expect(OpenFoodFactsMapper.parseGrams(from: nil) == nil)
+    }
+
+    @Test func parseExactGramsRequiresTheWholeStringToBeAGramFigure() {
+        #expect(OpenFoodFactsMapper.parseExactGrams(from: "30 g") == 30)
+        #expect(OpenFoodFactsMapper.parseExactGrams(from: "245g") == 245)
+        #expect(OpenFoodFactsMapper.parseExactGrams(from: "100 grams") == 100)
+        #expect(OpenFoodFactsMapper.parseExactGrams(from: "45.5G") == 45.5) // case-insensitive
+        // A leading digit isn't reliably grams in free-form user text — unlike `parseGrams`,
+        // this must not misread these as gram figures.
+        #expect(OpenFoodFactsMapper.parseExactGrams(from: "1 serving") == nil)
+        #expect(OpenFoodFactsMapper.parseExactGrams(from: "2 slices") == nil)
+        #expect(OpenFoodFactsMapper.parseExactGrams(from: "1 bar (45.5g)") == nil) // parenthetical, not the whole string
     }
 }

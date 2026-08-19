@@ -14,6 +14,11 @@ struct OFFProduct: Decodable {
     let brands: String?
     let servingSize: String?
     let nutriments: OFFNutriments?
+    /// Front-of-pack thumbnail (~100px), when the contributor uploaded one — used for list rows.
+    let imageThumbURL: String?
+    /// Front-of-pack photo at full display size (~400px) — used where there's room to show it
+    /// larger, e.g. the entry edit screen, where the thumbnail would look blurry blown up.
+    let imageFrontURL: String?
 
     enum CodingKeys: String, CodingKey {
         case code
@@ -21,6 +26,8 @@ struct OFFProduct: Decodable {
         case brands
         case servingSize = "serving_size"
         case nutriments
+        case imageThumbURL = "image_front_thumb_url"
+        case imageFrontURL = "image_front_url"
     }
 
     /// Excludes results with no barcode (can't be cached/logged) or no calorie figure at all —

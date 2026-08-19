@@ -19,6 +19,13 @@ final class FoodItem {
     var fiberGramsPerServing: Double?
     var sugarGramsPerServing: Double?
     var sodiumMgPerServing: Double?
+    /// Open Food Facts' front-of-pack thumbnail (~100px), when the source product has one. Nil
+    /// for manual/label-scanned items — there's no photo to show, callers fall back to a
+    /// placeholder. Used for small list-row icons.
+    var imageURLString: String?
+    /// The same photo at full display size (~400px) — used wherever there's room to show it
+    /// larger (e.g. the entry edit screen), where the thumbnail would look blurry blown up.
+    var imageDetailURLString: String?
     var source: FoodSource = FoodSource.manual
     var createdAt: Date = Date()
     var lastUsedAt: Date = Date()
@@ -40,6 +47,8 @@ final class FoodItem {
         fiberGramsPerServing: Double? = nil,
         sugarGramsPerServing: Double? = nil,
         sodiumMgPerServing: Double? = nil,
+        imageURLString: String? = nil,
+        imageDetailURLString: String? = nil,
         source: FoodSource
     ) {
         self.id = UUID()
@@ -56,6 +65,8 @@ final class FoodItem {
         self.fiberGramsPerServing = fiberGramsPerServing
         self.sugarGramsPerServing = sugarGramsPerServing
         self.sodiumMgPerServing = sodiumMgPerServing
+        self.imageURLString = imageURLString
+        self.imageDetailURLString = imageDetailURLString
         self.source = source
         self.createdAt = Date()
         self.lastUsedAt = Date()

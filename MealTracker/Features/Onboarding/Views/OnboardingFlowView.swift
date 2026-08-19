@@ -9,6 +9,7 @@ struct OnboardingFlowView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 ProgressView(value: Double(viewModel.step.rawValue + 1), total: Double(OnboardingViewModel.Step.allCases.count))
+                    .tint(Color.dashboardAccentDeep)
                     .padding(.horizontal)
                     .padding(.top, 8)
 

@@ -40,6 +40,14 @@ struct DashboardView: View {
         )
     }
 
+    /// Oldest to newest, ending on the viewed day — feeds `DailyOverviewCardView`'s 7-day strip.
+    private var recentDayProgress: [DayProgress] {
+        (0..<7).reversed().map { offset in
+            let day = Calendar.current.date(byAdding: .day, value: -offset, to: selectedDate) ?? selectedDate
+            return DayProgressCalculator.dayProgress(for: day, profile: profile, entries: profileEntries)
+        }
+    }
+
     private var navigationTitleText: String {
         if Calendar.current.isDateInToday(selectedDate) { return "Today" }
         if Calendar.current.isDateInYesterday(selectedDate) { return "Yesterday" }
@@ -48,37 +56,38 @@ struct DashboardView: View {
 
     var body: some View {
         NavigationStack(path: $path) {
-            List {
-                Section {
-                    WeekStripView(selectedDate: $selectedDate, profile: profile, entries: profileEntries)
-                }
-                .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets())
+            ScrollView {
+                VStack(spacing: 12) {
+                    WeekStripView(
+                        selectedDate: $selectedDate,
+                        profile: profile,
+                        entries: profileEntries,
+                        onTapCalendar: { isShowingMonthCalendar = true }
+                    )
 
-                Section("Macros") {
+                    DailyOverviewCardView(summary: summary, recentDayProgress: recentDayProgress, selectedDate: selectedDate)
+                        .padding(.horizontal, 18)
+
                     MacroBreakdownView(summary: summary)
-                }
+                        .padding(.horizontal, 18)
 
-                Section("Meals") {
-                    ForEach(mealSlots) { slot in
-                        NavigationLink(value: slot) {
-                            MealSlotRowView(mealSlot: slot, entries: selectedDayEntries.filter { $0.mealSlot?.id == slot.id })
-                        }
-                    }
+                    LoggedMealsCardView(
+                        mealSlots: mealSlots,
+                        selectedDayEntries: selectedDayEntries,
+                        totalCalories: summary.consumedCalories
+                    )
+                    .padding(.horizontal, 18)
+                    .padding(.bottom, 24)
                 }
             }
+            .background(Color.dashboardCanvas)
+            // Title kept (but not shown — see below) purely so a pushed `MealSlotDetailView`
+            // still gets a sensible default back-button label; the visible header is
+            // `WeekStripView`'s own big date heading instead, which now also hosts the calendar
+            // button that used to live here as a toolbar item. Showing both was a duplicated date.
             .navigationTitle(navigationTitleText)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        isShowingMonthCalendar = true
-                    } label: {
-                        Image(systemName: "calendar")
-                    }
-                    .accessibilityLabel("Choose Date")
-                }
-            }
+            .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: MealSlotConfig.self) { slot in
                 MealSlotDetailView(mealSlot: slot, date: selectedDate)
             }
@@ -147,5 +156,50 @@ struct DashboardView: View {
             path = NavigationPath()
         }
         lastActiveDayStart = today.timeIntervalSince1970
+    }
+}
+
+/// "Logged" card — a literal port of the mockup's meal list: an uppercase label + running total
+/// above a card of divided rows. Built by hand (rather than a `List` `Section`, which is what the
+/// rest of this screen used before this pass) so the card's corner radius, row insets and divider
+/// styling can match the mockup exactly instead of iOS's fixed inset-grouped chrome.
+private struct LoggedMealsCardView: View {
+    let mealSlots: [MealSlotConfig]
+    let selectedDayEntries: [LoggedEntry]
+    let totalCalories: Double
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("LOGGED")
+                    .font(.manrope(10, weight: .bold))
+                    .tracking(1.4)
+                    .foregroundStyle(Color.dashboardInkSecondary)
+                Spacer()
+                Text("\(Int(totalCalories)) kcal")
+                    .font(.manrope(12, weight: .semibold))
+                    .foregroundStyle(Color.dashboardAccent)
+            }
+            .padding(.horizontal, 4)
+
+            VStack(spacing: 0) {
+                ForEach(Array(mealSlots.enumerated()), id: \.element.id) { index, slot in
+                    NavigationLink(value: slot) {
+                        MealSlotRowView(mealSlot: slot, entries: selectedDayEntries.filter { $0.mealSlot?.id == slot.id })
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 15)
+
+                    if index < mealSlots.count - 1 {
+                        Rectangle()
+                            .fill(Color.dashboardDivider)
+                            .frame(height: 1)
+                            .padding(.leading, 15 + 44 + 13)
+                    }
+                }
+            }
+            .padding(.vertical, 6)
+            .background(Color.dashboardCard, in: RoundedRectangle(cornerRadius: 24))
+        }
     }
 }

@@ -23,7 +23,8 @@ struct CaloriesWeekCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Calories")
-                .font(.headline)
+                .font(.archivo(17, weight: .semibold))
+                .foregroundStyle(Color.dashboardInk)
 
             HStack(alignment: .center, spacing: 20) {
                 // Leading-aligned to match MacronutrientsWeekCardView's left column — both
@@ -34,8 +35,8 @@ struct CaloriesWeekCardView: View {
                         RingProgressView(
                             progress: todayFraction,
                             lineWidth: 9,
-                            trackColor: .secondary.opacity(0.15),
-                            progressColor: todayDelta >= 0 ? .accentColor : .brandProtein
+                            trackColor: Color.dashboardBarTrack,
+                            progressColor: todayDelta >= 0 ? .dashboardAccent : .brandProtein
                         )
                         // The stroke bleeds lineWidth/2 outside the shape's own bounding circle,
                         // so without this the ring's true visual diameter would overshoot
@@ -44,17 +45,17 @@ struct CaloriesWeekCardView: View {
                         .padding(4.5)
                         VStack(spacing: 0) {
                             Text("\(Int(abs(todayDelta)))")
-                                .font(.system(size: 22, weight: .bold, design: .rounded))
-                                .foregroundStyle(todayDelta >= 0 ? Color.accentColor : Color.brandProtein)
+                                .font(.archivo(17, weight: .semibold))
+                                .foregroundStyle(todayDelta >= 0 ? Color.dashboardAccent : Color.brandProtein)
                             Text(todayDelta >= 0 ? "Under" : "Over")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
+                                .font(.manrope(11, weight: .medium))
+                                .foregroundStyle(Color.dashboardInkSecondary)
                         }
                     }
                     .frame(width: Self.circleSize, height: Self.circleSize)
                     Text("\(Int(summary.todayConsumedCalories)) cals")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.secondary)
+                        .font(.manrope(12, weight: .medium))
+                        .foregroundStyle(Color.dashboardInkSecondary)
                 }
                 .frame(width: Self.leftColumnWidth, alignment: .leading)
 
@@ -63,11 +64,11 @@ struct CaloriesWeekCardView: View {
             }
 
             Text(weeklyBudgetText)
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(.secondary)
+                .font(.manrope(13, weight: .medium))
+                .foregroundStyle(Color.dashboardInkSecondary)
         }
         .padding()
-        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 16))
+        .background(Color.dashboardCard, in: RoundedRectangle(cornerRadius: 20))
         .accessibilityElement(children: .combine)
     }
 
@@ -128,8 +129,8 @@ private struct CalorieWeekBarsView: View {
             HStack(spacing: barSpacing) {
                 ForEach(points) { point in
                     Text(point.date.formatted(.dateTime.weekday(.narrow)))
-                        .font(.caption2.weight(.medium))
-                        .foregroundStyle(Calendar.current.isDateInToday(point.date) ? .primary : .secondary)
+                        .font(.manrope(10, weight: .semibold))
+                        .foregroundStyle(Calendar.current.isDateInToday(point.date) ? Color.dashboardAccentDeep : Color.dashboardInkFaint)
                         .frame(width: barWidth)
                 }
             }
@@ -147,7 +148,7 @@ private struct CalorieWeekBarsView: View {
                 }
             }
         }
-        .stroke(Color.secondary, style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round, dash: [4, 3]))
+        .stroke(Color.dashboardLime.opacity(0.9), style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round, dash: [4, 3]))
         .frame(width: totalWidth, height: barMaxHeight, alignment: .bottom)
         .accessibilityHidden(true)
     }
@@ -165,12 +166,12 @@ private struct CalorieDayBarView: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             RoundedRectangle(cornerRadius: 4)
-                .fill(Color.secondary.opacity(0.15))
+                .fill(Color.dashboardBarTrack)
                 .frame(width: barWidth, height: barMaxHeight)
 
             if point.hasEntries {
                 RoundedRectangle(cornerRadius: 4)
-                    .fill(isOver ? Color.brandProtein : Color.accentColor)
+                    .fill(isOver ? Color.brandProtein : Color.dashboardBarFill)
                     .frame(width: barWidth, height: fillHeight)
             }
         }
@@ -180,7 +181,7 @@ private struct CalorieDayBarView: View {
                     .font(.system(size: 8, weight: .heavy))
                     .foregroundStyle(.white)
                     .frame(width: 14, height: 14)
-                    .background(Color.accentColor, in: Circle())
+                    .background(Color.dashboardAccent, in: Circle())
                     .offset(y: -(fillHeight + 7))
             }
         }

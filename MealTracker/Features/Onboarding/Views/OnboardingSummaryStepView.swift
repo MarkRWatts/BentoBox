@@ -19,11 +19,10 @@ struct OnboardingSummaryStepView: View {
             }
 
             Section {
-                Button("Get Started") {
-                    onComplete()
-                }
-                .fontWeight(.semibold)
+                OnboardingContinueButton(title: "Get Started", action: onComplete)
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(Color.dashboardCanvas)
     }
 }

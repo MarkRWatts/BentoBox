@@ -45,5 +45,9 @@ struct MainTabView: View {
                 }
                 .tag(MainTab.settings)
         }
+        // Matches the Dashboard day strip's "logged" dots (`Color.dashboardAccent`) rather than
+        // the app-wide `accentColor` asset, so the floating tab bar reads as the same mint green
+        // used throughout the redesigned screens.
+        .tint(Color.dashboardAccent)
     }
 }

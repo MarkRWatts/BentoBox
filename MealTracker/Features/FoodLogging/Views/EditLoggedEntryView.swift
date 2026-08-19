@@ -43,9 +43,41 @@ struct EditLoggedEntryView: View {
         _quantity = State(initialValue: entry.quantity)
     }
 
+    /// Prefers the original FoodItem's own known gram basis — more reliable than re-parsing the
+    /// text, since not every real serving-size string round-trips through `parseExactGrams`
+    /// (e.g. "1 bar (30g)"). Only falls back to re-deriving from the (editable) description once
+    /// the user actually changes that text away from what it originally described, since at that
+    /// point the original basis no longer applies and re-parsing their new text is the only
+    /// signal left.
+    private var servingSizeGrams: Double? {
+        if servingSizeDescription == entry.foodItem?.servingSizeDescription {
+            return entry.foodItem?.servingSizeGrams
+        }
+        return OpenFoodFactsMapper.parseExactGrams(from: servingSizeDescription)
+    }
+
+    /// Prefers the larger detail-size photo over the list-row thumbnail — nothing shows at all
+    /// for manual/label-scanned entries with no source photo.
+    private var displayImageURLString: String? {
+        entry.foodItem?.imageDetailURLString ?? entry.foodItem?.imageURLString
+    }
+
     var body: some View {
         NavigationStack {
             Form {
+                if let displayImageURLString {
+                    Section {
+                        FoodThumbnailView(
+                            urlString: displayImageURLString,
+                            shape: RoundedRectangle(cornerRadius: 16),
+                            placeholderColor: .dashboardBarTrack,
+                            size: 120
+                        )
+                        .frame(maxWidth: .infinity)
+                        .listRowBackground(Color.clear)
+                    }
+                }
+
                 Section("Food") {
                     TextField("Name", text: $name)
                     TextField("Brand (optional)", text: $brand)
@@ -64,9 +96,7 @@ struct EditLoggedEntryView: View {
                 }
 
                 Section("Quantity") {
-                    Stepper(value: $quantity, in: 0.25...20, step: 0.25) {
-                        Text("Servings: \(quantity, specifier: "%.2f")")
-                    }
+                    PortionQuantityField(quantity: $quantity, servingSizeGrams: servingSizeGrams)
                 }
             }
             .navigationTitle("Edit Entry")
@@ -95,6 +125,7 @@ struct EditLoggedEntryView: View {
                 brand: brand.isEmpty ? nil : brand,
                 barcode: nil,
                 servingSizeDescription: servingSizeDescription,
+                servingSizeGrams: servingSizeGrams,
                 caloriesPerServing: calories,
                 proteinGramsPerServing: proteinGrams,
                 carbGramsPerServing: carbGrams,
@@ -103,6 +134,8 @@ struct EditLoggedEntryView: View {
                 fiberGramsPerServing: fiberGrams,
                 sugarGramsPerServing: sugarGrams,
                 sodiumMgPerServing: sodiumMg,
+                imageURLString: previousFoodItem?.imageURLString,
+                imageDetailURLString: previousFoodItem?.imageDetailURLString,
                 source: .manual
             )
             modelContext.insert(detached)
