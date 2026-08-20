@@ -63,6 +63,7 @@ struct MealSlotDetailView: View {
                             }
                         }
                     }
+                    .buttonStyle(.plain)
                     .listRowBackground(Color.dashboardCard)
                     // Full swipe deliberately off: the gesture reveals the button and the copy
                     // needs a tap, rather than a long swipe silently opening the sheet.
