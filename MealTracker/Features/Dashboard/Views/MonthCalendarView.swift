@@ -7,15 +7,15 @@ import SwiftUI
 struct MonthCalendarView: View {
     @Binding var selectedDate: Date
     let profile: UserProfile
-    let entries: [LoggedEntry]
+    let daysWithEntries: Set<Date>
 
     @Environment(\.dismiss) private var dismiss
     @State private var displayedMonth: Date
 
-    init(selectedDate: Binding<Date>, profile: UserProfile, entries: [LoggedEntry]) {
+    init(selectedDate: Binding<Date>, profile: UserProfile, daysWithEntries: Set<Date>) {
         self._selectedDate = selectedDate
         self.profile = profile
-        self.entries = entries
+        self.daysWithEntries = daysWithEntries
         self._displayedMonth = State(initialValue: selectedDate.wrappedValue)
     }
 
@@ -122,7 +122,7 @@ struct MonthCalendarView: View {
         let isInDisplayedMonth = calendar.isDate(day, equalTo: displayedMonth, toGranularity: .month)
         let isSelected = calendar.isDate(day, inSameDayAs: selectedDate)
         let isToday = calendar.isDateInToday(day)
-        let hasEntries = DayProgressCalculator.dayProgress(for: day, profile: profile, entries: entries).hasEntries
+        let hasEntries = daysWithEntries.contains(day.startOfDay)
 
         Button {
             selectedDate = day

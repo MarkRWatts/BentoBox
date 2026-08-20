@@ -11,8 +11,8 @@ import UIKit
 /// match the Mon–Sun layout used throughout this feature.
 struct WeekStripView: View {
     @Binding var selectedDate: Date
-    let profile: UserProfile
-    let entries: [LoggedEntry]
+    /// Start-of-day keys for the days that have entries — see `DayProgressCalculator`.
+    let daysWithEntries: Set<Date>
     var onTapCalendar: () -> Void
     var onTapAvatar: () -> Void
 
@@ -34,14 +34,12 @@ struct WeekStripView: View {
 
     init(
         selectedDate: Binding<Date>,
-        profile: UserProfile,
-        entries: [LoggedEntry],
+        daysWithEntries: Set<Date>,
         onTapCalendar: @escaping () -> Void,
         onTapAvatar: @escaping () -> Void
     ) {
         self._selectedDate = selectedDate
-        self.profile = profile
-        self.entries = entries
+        self.daysWithEntries = daysWithEntries
         self.onTapCalendar = onTapCalendar
         self.onTapAvatar = onTapAvatar
         // Seeded directly as the initial `@State` value rather than assigned in `.onAppear` —
@@ -191,7 +189,7 @@ struct WeekStripView: View {
     @ViewBuilder
     private func dayCell(_ day: Date) -> some View {
         let isSelected = calendar.isDate(day, inSameDayAs: selectedDate)
-        let hasEntries = DayProgressCalculator.dayProgress(for: day, profile: profile, entries: entries).hasEntries
+        let hasEntries = daysWithEntries.contains(day.startOfDay)
         Button {
             selectedDate = day
         } label: {

@@ -32,15 +32,13 @@ struct DashboardView: View {
         allMealSlots.filter { $0.isEnabled && $0.profile?.id == profile.id }
     }
 
-    /// All of this profile's entries, unfiltered by date — same "query everything, filter in
-    /// Swift" pattern `ChartsView` already uses, needed since a SwiftData `@Query` predicate
-    /// can't be mutated after `init` to follow a changing `selectedDate`.
+    /// Filtered in Swift rather than by the `@Query`: a SwiftData predicate can't traverse two
+    /// relationships (`entry.mealSlot?.profile?.id` fails at fetch with "Unsupported function
+    /// expression"), and it can't follow a changing `selectedDate` either. It is therefore
+    /// evaluated exactly once per render in `body` and passed down — reading it from each of the
+    /// dozen computed properties that need it walked the whole log a dozen times per pass.
     private var profileEntries: [LoggedEntry] {
         allEntries.filter { $0.mealSlot?.profile?.id == profile.id }
-    }
-
-    private var selectedDayEntries: [LoggedEntry] {
-        profileEntries.filter { $0.date >= selectedDate.startOfDay && $0.date < selectedDate.endOfDay }
     }
 
     /// Which slot the quick-add button starts on — a guess from the clock, correctable in the
@@ -50,19 +48,31 @@ struct DashboardView: View {
         MealSlotSuggestion.suggestedSlot(at: Date(), from: mealSlots)
     }
 
-    private var summary: DashboardViewModel {
+    /// Takes the already-filtered entries so `body` can compute them once; the parameterless
+    /// version below is for the occasional non-render caller (widget snapshot, adaptive target).
+    private func summary(for entries: [LoggedEntry]) -> DashboardViewModel {
         DashboardViewModel(
             profile: profile,
-            todaysEntries: selectedDayEntries,
+            todaysEntries: entries.filter { $0.date >= selectedDate.startOfDay && $0.date < selectedDate.endOfDay },
             weekday: Calendar.current.component(.weekday, from: selectedDate)
         )
     }
 
+    private var summary: DashboardViewModel {
+        summary(for: profileEntries)
+    }
+
     /// Oldest to newest, ending on the viewed day — feeds `DailyOverviewCardView`'s 7-day strip.
-    private var recentDayProgress: [DayProgress] {
+    /// Groups the log once and hands each day only its own entries, rather than having all seven
+    /// days each filter the whole thing.
+    private func recentDayProgress(from entriesByDay: [Date: [LoggedEntry]]) -> [DayProgress] {
         (0..<7).reversed().map { offset in
             let day = Calendar.current.date(byAdding: .day, value: -offset, to: selectedDate) ?? selectedDate
-            return DayProgressCalculator.dayProgress(for: day, profile: profile, entries: profileEntries)
+            return DayProgressCalculator.dayProgress(
+                for: day,
+                profile: profile,
+                entries: entriesByDay[day.startOfDay] ?? []
+            )
         }
     }
 
@@ -73,18 +83,31 @@ struct DashboardView: View {
     }
 
     var body: some View {
-        NavigationStack(path: $path) {
+        // The log is walked once here and the results handed down, rather than each card reading
+        // the computed properties and re-filtering. SwiftUI evaluates this body several times per
+        // tab switch and both tabs re-render on each one, so a filter that costs ~4ms over a
+        // year of entries was landing dozens of times per switch.
+        let entries = profileEntries
+        let entriesByDay = DayProgressCalculator.entriesByDay(entries)
+        let daysWithEntries = DayProgressCalculator.daysWithEntries(entries)
+        let summary = summary(for: entries)
+        // Watched below instead of the day's entries array: comparing that array meant rebuilding
+        // it (and so re-filtering the whole log) on every render just to decide whether the
+        // widget needed rewriting. The calorie total is already computed here and changes
+        // whenever the widget's contents would.
+        let consumedToday = summary.consumedCalories
+
+        return NavigationStack(path: $path) {
             ScrollView {
                 VStack(spacing: 12) {
                     WeekStripView(
                         selectedDate: $dayContext.selectedDate,
-                        profile: profile,
-                        entries: profileEntries,
+                        daysWithEntries: daysWithEntries,
                         onTapCalendar: { isShowingMonthCalendar = true },
                         onTapAvatar: { path.append(SettingsRoute()) }
                     )
 
-                    DailyOverviewCardView(summary: summary, recentDayProgress: recentDayProgress, selectedDate: selectedDate)
+                    DailyOverviewCardView(summary: summary, recentDayProgress: recentDayProgress(from: entriesByDay), selectedDate: selectedDate)
                         .padding(.horizontal, 18)
 
                     MacroBreakdownView(summary: summary)
@@ -119,14 +142,14 @@ struct DashboardView: View {
                 }
             }
             .sheet(isPresented: $isShowingMonthCalendar) {
-                MonthCalendarView(selectedDate: $dayContext.selectedDate, profile: profile, entries: profileEntries)
+                MonthCalendarView(selectedDate: $dayContext.selectedDate, profile: profile, daysWithEntries: daysWithEntries)
             }
             .onAppear {
                 writeWidgetSnapshot()
                 resetToTodayIfNewDay()
                 recalculateAdaptiveTargetIfNeeded()
             }
-            .onChange(of: selectedDayEntries) { _, _ in writeWidgetSnapshot() }
+            .onChange(of: consumedToday) { _, _ in writeWidgetSnapshot() }
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .active { resetToTodayIfNewDay() }
             }

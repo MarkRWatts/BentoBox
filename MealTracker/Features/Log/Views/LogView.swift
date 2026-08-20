@@ -14,10 +14,24 @@ struct LogView: View {
 
     @Query(sort: \MealSlotConfig.sortOrder) private var allMealSlots: [MealSlotConfig]
     @Query(sort: \LoggedEntry.date) private var allEntries: [LoggedEntry]
-    @Query(sort: \WaterLogEntry.date) private var allWaterEntries: [WaterLogEntry]
+    /// Water is scoped by the query itself — `WaterLogEntry.profile` is a single hop, which
+    /// SwiftData can express. `LoggedEntry` reaches its profile through `mealSlot`, and a
+    /// two-relationship predicate fails at fetch time ("Unsupported function expression"), so
+    /// that one is filtered in Swift — once per render, in `body`.
+    @Query private var profileWaterEntries: [WaterLogEntry]
     @State private var path = NavigationPath()
     @State private var isShowingMonthCalendar = false
     @State private var isAddingFood = false
+
+    init(profile: UserProfile, dayContext: DayContext) {
+        self.profile = profile
+        self._dayContext = Bindable(dayContext)
+        let profileID = profile.id
+        _profileWaterEntries = Query(
+            filter: #Predicate<WaterLogEntry> { $0.profile?.id == profileID },
+            sort: \WaterLogEntry.date
+        )
+    }
 
     /// Read/write shortcut for `dayContext.selectedDate`, so the rest of this view reads the way
     /// it did when the date was local state.
@@ -30,26 +44,19 @@ struct LogView: View {
         allMealSlots.filter { $0.isEnabled && $0.profile?.id == profile.id }
     }
 
-    /// Same "query everything, filter in Swift" pattern the Dashboard uses — a `@Query`
-    /// predicate can't be mutated after `init` to follow a changing `selectedDate`.
+    /// See `DashboardView` for why this filter lives in Swift rather than in the query.
     private var profileEntries: [LoggedEntry] {
         allEntries.filter { $0.mealSlot?.profile?.id == profile.id }
     }
 
-    private var selectedDayEntries: [LoggedEntry] {
-        profileEntries.filter { $0.date >= selectedDate.startOfDay && $0.date < selectedDate.endOfDay }
-    }
-
     private var selectedDayWaterEntries: [WaterLogEntry] {
-        allWaterEntries.filter {
-            $0.profile?.id == profile.id && $0.date >= selectedDate.startOfDay && $0.date < selectedDate.endOfDay
-        }
+        profileWaterEntries.filter { $0.date >= selectedDate.startOfDay && $0.date < selectedDate.endOfDay }
     }
 
-    private var summary: DashboardViewModel {
+    private func summary(for dayEntries: [LoggedEntry]) -> DashboardViewModel {
         DashboardViewModel(
             profile: profile,
-            todaysEntries: selectedDayEntries,
+            todaysEntries: dayEntries,
             weekday: Calendar.current.component(.weekday, from: selectedDate)
         )
     }
@@ -67,7 +74,12 @@ struct LogView: View {
     }
 
     var body: some View {
-        NavigationStack(path: $path) {
+        // Walked once per render and handed down — see the same note in `DashboardView`.
+        let entries = profileEntries
+        let selectedDayEntries = entries.filter { $0.date >= selectedDate.startOfDay && $0.date < selectedDate.endOfDay }
+        let summary = summary(for: selectedDayEntries)
+
+        return NavigationStack(path: $path) {
             ScrollView {
                 VStack(spacing: 12) {
                     header
@@ -103,11 +115,16 @@ struct LogView: View {
                     FloatingAddButton(accessibilityLabel: "Log Food") { isAddingFood = true }
                 }
             }
-            // Kept (but not shown) so a pushed `MealSlotDetailView` gets a sensible back-button
-            // label, same as the Dashboard does with its own custom header.
-            .navigationTitle("Log")
+            .contentMargins(.top, 0, for: .scrollContent)
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar(.hidden, for: .navigationBar)
+            // Only the background is hidden — never `.toolbar(.hidden, for: .navigationBar)`,
+            // which is what this view originally copied from the Dashboard. Toggling the bar's
+            // visibility inside a TabView's per-tab `NavigationStack` replays its hide animation
+            // on every tab re-selection, producing a stutter on each switch (see
+            // https://developer.apple.com/forums/thread/758923); `ChartsView` was moved off that
+            // pattern for the same reason in eaf44de.
+            .toolbarBackground(.hidden, for: .navigationBar)
             .navigationDestination(for: MealSlotConfig.self) { slot in
                 MealSlotDetailView(mealSlot: slot, date: selectedDate)
             }
@@ -117,7 +134,11 @@ struct LogView: View {
                 }
             }
             .sheet(isPresented: $isShowingMonthCalendar) {
-                MonthCalendarView(selectedDate: $dayContext.selectedDate, profile: profile, entries: profileEntries)
+                MonthCalendarView(
+                    selectedDate: $dayContext.selectedDate,
+                    profile: profile,
+                    daysWithEntries: DayProgressCalculator.daysWithEntries(entries)
+                )
             }
         }
     }
