@@ -22,7 +22,7 @@ struct ProductLookupResultView: View {
                 Section {
                     FoodThumbnailView(
                         urlString: displayImageURLString,
-                        shape: RoundedRectangle(cornerRadius: 16),
+                        cornerRadius: 16,
                         placeholderColor: .dashboardBarTrack,
                         size: 120
                     )

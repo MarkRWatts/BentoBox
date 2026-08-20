@@ -42,7 +42,7 @@ struct RecentFoodRowView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            FoodThumbnailView(urlString: foodItem.imageURLString, shape: Circle(), placeholderColor: .dashboardBarFill)
+            FoodThumbnailView(urlString: foodItem.imageURLString, cornerRadius: 18, placeholderColor: .dashboardBarFill)
             VStack(alignment: .leading, spacing: 2) {
                 Text(foodItem.name)
                     .font(.manrope(14, weight: .semibold))
@@ -77,7 +77,7 @@ struct FoodSearchResultRowView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            FoodThumbnailView(urlString: result.thumbnailURLString, shape: RoundedRectangle(cornerRadius: 11), placeholderColor: .dashboardBarTrack)
+            FoodThumbnailView(urlString: result.thumbnailURLString, cornerRadius: 11, placeholderColor: .dashboardBarTrack)
             VStack(alignment: .leading, spacing: 2) {
                 Text(result.preview.name)
                     .font(.manrope(14, weight: .semibold))

@@ -49,7 +49,7 @@ struct MealSlotDetailView: View {
                         HStack(spacing: 12) {
                             FoodThumbnailView(
                                 urlString: entry.foodItem?.imageURLString,
-                                shape: RoundedRectangle(cornerRadius: 12),
+                                cornerRadius: 12,
                                 placeholderColor: .dashboardBarTrack,
                                 size: 40
                             )

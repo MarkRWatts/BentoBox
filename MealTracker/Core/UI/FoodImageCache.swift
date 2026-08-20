@@ -26,19 +26,20 @@ final class FoodImageCache: @unchecked Sendable {
 
     /// Synchronous cache read, so a view that already has its image can show it on the very first
     /// frame instead of flashing its placeholder.
-    func cachedImage(for urlString: String, size: CGFloat) -> UIImage? {
-        cache.object(forKey: Self.key(urlString, size) as NSString)
+    func cachedImage(for urlString: String, size: CGFloat, cornerRadius: CGFloat) -> UIImage? {
+        cache.object(forKey: Self.key(urlString, size, cornerRadius) as NSString)
     }
 
-    func image(for urlString: String, size: CGFloat) async -> UIImage? {
-        let key = Self.key(urlString, size)
+    func image(for urlString: String, size: CGFloat, cornerRadius: CGFloat) async -> UIImage? {
+        let key = Self.key(urlString, size, cornerRadius)
         if let cached = cache.object(forKey: key as NSString) { return cached }
 
         let task = existingOrStartedTask(for: key) {
             Task.detached(priority: .utility) { [self] () -> UIImage? in
                 guard let url = URL(string: urlString),
                       let (data, _) = try? await URLSession.shared.data(from: url),
-                      let image = Self.downsample(data, to: size) else { return nil }
+                      let downsampled = Self.downsample(data, to: size) else { return nil }
+                let image = Self.roundedSquare(downsampled, size: size, cornerRadius: cornerRadius)
                 cache.setObject(image, forKey: key as NSString)
                 return image
             }
@@ -75,8 +76,30 @@ final class FoodImageCache: @unchecked Sendable {
     /// pixels are negligible.
     private static let maxDisplayScale: CGFloat = 3
 
-    private static func key(_ urlString: String, _ size: CGFloat) -> String {
-        "\(urlString)|\(Int(size))"
+    private static func key(_ urlString: String, _ size: CGFloat, _ cornerRadius: CGFloat) -> String {
+        "\(urlString)|\(Int(size))|\(Int(cornerRadius))"
+    }
+
+    /// Bakes the aspect-fill crop and the rounded corners into the bitmap itself, so a row draws
+    /// a plain opaque-ish image instead of an image plus a live `clipShape` mask. Masks matter
+    /// here because a swipe makes the cell re-rasterise as its own corners animate, and every
+    /// mask inside the cell is part of that work.
+    private static func roundedSquare(_ image: UIImage, size: CGFloat, cornerRadius: CGFloat) -> UIImage {
+        let bounds = CGRect(x: 0, y: 0, width: size, height: size)
+        let format = UIGraphicsImageRendererFormat.preferred()
+        format.scale = maxDisplayScale
+        format.opaque = false
+        return UIGraphicsImageRenderer(size: bounds.size, format: format).image { _ in
+            UIBezierPath(roundedRect: bounds, cornerRadius: cornerRadius).addClip()
+            let scale = max(bounds.width / image.size.width, bounds.height / image.size.height)
+            let drawSize = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+            image.draw(in: CGRect(
+                x: (bounds.width - drawSize.width) / 2,
+                y: (bounds.height - drawSize.height) / 2,
+                width: drawSize.width,
+                height: drawSize.height
+            ))
+        }
     }
 
     /// Decodes straight to the drawn size via ImageIO. `shouldCacheImmediately` forces the decode
