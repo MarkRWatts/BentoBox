@@ -14,17 +14,25 @@ struct WeekStripView: View {
     let profile: UserProfile
     let entries: [LoggedEntry]
     var onTapCalendar: () -> Void
+    var onTapAvatar: () -> Void
 
     /// ~2 years back and forward — generous enough nobody hits the edge in practice, cheap since
     /// only the visible columns are ever actually rendered.
     private let dayOffsetRange = -730...730
     @State private var scrolledDayOffset: Int?
 
-    init(selectedDate: Binding<Date>, profile: UserProfile, entries: [LoggedEntry], onTapCalendar: @escaping () -> Void) {
+    init(
+        selectedDate: Binding<Date>,
+        profile: UserProfile,
+        entries: [LoggedEntry],
+        onTapCalendar: @escaping () -> Void,
+        onTapAvatar: @escaping () -> Void
+    ) {
         self._selectedDate = selectedDate
         self.profile = profile
         self.entries = entries
         self.onTapCalendar = onTapCalendar
+        self.onTapAvatar = onTapAvatar
         // Seeded directly as the initial `@State` value rather than assigned in `.onAppear` —
         // `.scrollPosition(id:anchor:.center)` needs `scrolledDayOffset` already populated before
         // the scroll view's very first layout pass to center on it reliably. Setting it in
@@ -73,6 +81,7 @@ struct WeekStripView: View {
     var body: some View {
         VStack(spacing: 12) {
             HStack(alignment: .center) {
+                AvatarButton(action: onTapAvatar)
                 Text(headingText)
                     .font(.archivo(30, weight: .semibold))
                     .foregroundStyle(Color.dashboardInk)

@@ -42,4 +42,19 @@ struct TDEECalculatorTests {
         #expect(abs(totalKcal - 2000) < 0.01)
         #expect(abs(targets.proteinGrams - 126) < 0.001) // 70 * 1.8
     }
+
+    @Test func micronutrientTargetsVaryFiberBySexOnly() {
+        let male = TDEECalculator.micronutrientTargets(calorieTarget: 2000, sex: .male)
+        let female = TDEECalculator.micronutrientTargets(calorieTarget: 2000, sex: .female)
+        #expect(male.fiberGrams == 38)
+        #expect(female.fiberGrams == 25)
+        #expect(male.sodiumMg == female.sodiumMg)
+    }
+
+    @Test func micronutrientTargetsScaleSaturatedFatAndSugarWithCalories() {
+        let targets = TDEECalculator.micronutrientTargets(calorieTarget: 1800, sex: .male)
+        #expect(abs(targets.saturatedFatGrams - 20) < 0.001) // 1800 * 0.10 / 9
+        #expect(abs(targets.sugarGrams - 45) < 0.001) // 1800 * 0.10 / 4
+        #expect(targets.sodiumMg == 2300)
+    }
 }

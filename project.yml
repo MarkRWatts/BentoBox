@@ -6,6 +6,11 @@ options:
   createIntermediateGroups: true
   developmentLanguage: en
 
+packages:
+  GoogleSignIn:
+    url: https://github.com/google/GoogleSignIn-iOS
+    from: 8.0.0
+
 settings:
   base:
     SWIFT_VERSION: "6.0"
@@ -32,6 +37,10 @@ targets:
         UISupportedInterfaceOrientations~ipad:
           - UIInterfaceOrientationPortrait
         NSCameraUsageDescription: "cal:Track uses your camera to scan barcodes and nutrition labels."
+        GIDClientID: "80415266084-7ingetu6jssuj03o2ipljdvrrtur6e84.apps.googleusercontent.com"
+        CFBundleURLTypes:
+          - CFBundleURLSchemes:
+              - com.googleusercontent.apps.80415266084-7ingetu6jssuj03o2ipljdvrrtur6e84
         UIAppFonts:
           - Archivo-Medium.ttf
           - Archivo-SemiBold.ttf
@@ -56,6 +65,8 @@ targets:
     dependencies:
       - target: MealTrackerWidget
         embed: true
+      - package: GoogleSignIn
+        product: GoogleSignIn
     scheme:
       testTargets:
         - MealTrackerTests

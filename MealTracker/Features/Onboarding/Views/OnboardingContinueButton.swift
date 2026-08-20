@@ -10,7 +10,7 @@ struct OnboardingContinueButton: View {
         Button(action: action) {
             Text(title)
                 .font(.manrope(14.5, weight: .bold))
-                .foregroundStyle(.white)
+                .foregroundStyle(Color.dashboardCard)
                 .frame(maxWidth: .infinity)
                 .frame(height: 52)
                 .background(Color.dashboardInk, in: RoundedRectangle(cornerRadius: 17))

@@ -1,7 +1,7 @@
 import SwiftUI
 
 private enum MainTab: Int, Hashable, CaseIterable {
-    case today, trends, settings
+    case today, trends
 }
 
 struct MainTabView: View {
@@ -58,13 +58,6 @@ struct MainTabView: View {
                     Label("Trends", systemImage: "chart.line.uptrend.xyaxis")
                 }
                 .tag(MainTab.trends)
-
-            SettingsView(profile: profile)
-                .simultaneousGesture(swipeBetweenTabsGesture)
-                .tabItem {
-                    Label("Settings", systemImage: "gearshape.fill")
-                }
-                .tag(MainTab.settings)
         }
         // Matches the Dashboard day strip's "logged" dots (`Color.dashboardAccent`) rather than
         // the app-wide `accentColor` asset, so the floating tab bar reads as the same mint green

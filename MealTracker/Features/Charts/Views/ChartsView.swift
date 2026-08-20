@@ -71,6 +71,14 @@ struct ChartsView: View {
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets())
 
+                if profile.isAdaptiveCalorieTargetEnabled {
+                    Section {
+                        AdaptiveTDEECardView(profile: profile, loggedEntries: loggedEntries, weightEntries: weightEntries)
+                    }
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
+                }
+
                 Section("Body") {
                     NavigationLink {
                         WeightView(profile: profile)
@@ -209,6 +217,84 @@ private struct VerdictCardView: View {
         guard magnitude >= 0.1 else { return "Weight steady this week" }
         let direction = deltaKG < 0 ? "down" : "up"
         return "Weight \(direction) \(weightUnit.displayString(fromKG: magnitude)) this week"
+    }
+}
+
+/// Shows the calorie target actually driving the day (the weekly-cached
+/// `profile.adaptiveCalorieTarget` — see `DashboardView.recalculateAdaptiveTargetIfNeeded`)
+/// alongside a freshly-computed breakdown of what's currently feeding it. The two can differ
+/// slightly during the week as new logs/weigh-ins come in; the headline number only catches up
+/// once a week by design, so today's budget doesn't jitter with every entry.
+private struct AdaptiveTDEECardView: View {
+    let profile: UserProfile
+    let loggedEntries: [LoggedEntry]
+    let weightEntries: [BodyMetricEntry]
+
+    private var liveEstimate: AdaptiveTDEECalculator.Result? {
+        let dailyCalories = Dictionary(grouping: loggedEntries, by: { $0.date.startOfDay })
+            .mapValues { $0.reduce(0) { $0 + $1.calories } }
+        let weights = weightEntries.map { (date: $0.date.startOfDay, weightKG: $0.weightKG) }
+        return AdaptiveTDEECalculator.estimate(dailyCalories: dailyCalories, weightEntries: weights)
+    }
+
+    private func weightTrendText(kgPerWeek: Double) -> String {
+        let magnitude = abs(kgPerWeek)
+        guard magnitude >= 0.05 else { return "steady" }
+        let direction = kgPerWeek < 0 ? "down" : "up"
+        return "\(direction) \(profile.weightUnit.displayString(fromKG: magnitude))/wk"
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("ADAPTIVE TARGET")
+                .font(.manrope(10, weight: .bold))
+                .tracking(1.4)
+                .foregroundStyle(Color.dashboardInkSecondary)
+
+            if let target = profile.adaptiveCalorieTarget {
+                Text("\(Int(target)) kcal")
+                    .font(.archivo(26, weight: .semibold))
+                    .foregroundStyle(Color.dashboardInk)
+                if let updatedAt = profile.adaptiveCalorieTargetUpdatedAt {
+                    Text("Updated \(updatedAt.formatted(date: .abbreviated, time: .omitted))")
+                        .font(.manrope(11, weight: .medium))
+                        .foregroundStyle(Color.dashboardInkSecondary)
+                }
+                if let liveEstimate {
+                    Rectangle().fill(Color.dashboardDivider).frame(height: 1).padding(.vertical, 2)
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("\(Int(liveEstimate.averageDailyCalories))")
+                                .font(.manrope(14, weight: .semibold))
+                                .foregroundStyle(Color.dashboardInk)
+                            Text("14-day avg intake")
+                                .font(.manrope(10, weight: .medium))
+                                .foregroundStyle(Color.dashboardInkSecondary)
+                        }
+                        Spacer()
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(weightTrendText(kgPerWeek: liveEstimate.weightTrendKGPerWeek))
+                                .font(.manrope(14, weight: .semibold))
+                                .foregroundStyle(Color.dashboardInk)
+                            Text("Weight trend")
+                                .font(.manrope(10, weight: .medium))
+                                .foregroundStyle(Color.dashboardInkSecondary)
+                        }
+                    }
+                }
+            } else {
+                Text("Gathering data")
+                    .font(.archivo(20, weight: .semibold))
+                    .foregroundStyle(Color.dashboardInk)
+                Text("Needs \(AdaptiveTDEECalculator.minimumDays) days of logged food and 2+ weigh-ins — your target stays on the standard formula until then.")
+                    .font(.manrope(12, weight: .medium))
+                    .foregroundStyle(Color.dashboardInkSecondary)
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.dashboardCard, in: RoundedRectangle(cornerRadius: 20))
+        .accessibilityElement(children: .combine)
     }
 }
 

@@ -32,4 +32,8 @@ final class LoggedEntry {
     var proteinGrams: Double { (foodItem?.proteinGramsPerServing ?? 0) * quantity }
     var carbGrams: Double { (foodItem?.carbGramsPerServing ?? 0) * quantity }
     var fatGrams: Double { (foodItem?.fatGramsPerServing ?? 0) * quantity }
+    var fiberGrams: Double { (foodItem?.fiberGramsPerServing ?? 0) * quantity }
+    var sugarGrams: Double { (foodItem?.sugarGramsPerServing ?? 0) * quantity }
+    var saturatedFatGrams: Double { (foodItem?.saturatedFatGramsPerServing ?? 0) * quantity }
+    var sodiumMg: Double { (foodItem?.sodiumMgPerServing ?? 0) * quantity }
 }

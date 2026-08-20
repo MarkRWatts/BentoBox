@@ -2,14 +2,14 @@ import SwiftUI
 import SwiftData
 
 /// Single entry point for adding food to a meal slot: search-by-name, recently-used foods for a
-/// fast re-log, plus the three ways to add something new. Recency-sorted rather than tracking a
+/// fast re-log, plus the ways to add something new. Recency-sorted rather than tracking a
 /// separate frequency count — foods you eat often keep getting bumped back to the top every time
 /// you log them again, so "Recent" already reads as "Frequent" in practice.
 ///
 /// A literal port of the Claude Design mockup's "Log food" screen (1d): a search pill paired with
 /// a barcode-scan button, then card-grouped result lists. The mockup only anticipated barcode
-/// scanning as a companion action — label scan, manual entry and copy-from-previous-day are real
-/// features it didn't design for, so those live in a compact secondary-actions row instead.
+/// scanning as a companion action — label scan, manual entry, copy-from-previous-day and recipes
+/// are real features it didn't design for, so those live in a compact secondary-actions row instead.
 struct AddFoodView: View {
     let mealSlot: MealSlotConfig
     var date: Date = Date()
@@ -17,6 +17,7 @@ struct AddFoodView: View {
     var onSelectLabelScan: () -> Void
     var onSelectManualEntry: () -> Void
     var onSelectCopyFromPreviousDay: () -> Void
+    var onSelectRecipes: () -> Void
     var onLogged: () -> Void
 
     @Query(sort: \FoodItem.lastUsedAt, order: .reverse) private var allFoodItems: [FoodItem]
@@ -24,11 +25,12 @@ struct AddFoodView: View {
     @Environment(\.modelContext) private var modelContext
 
     @State private var searchQuery = ""
-    @State private var searchResults: [OFFProduct] = []
+    @State private var searchResults: [FoodSearchResult] = []
     @State private var isLoadingResults = false
     @State private var searchErrorMessage: String?
+    @State private var path = NavigationPath()
     @FocusState private var isSearchFocused: Bool
-    private let client = OpenFoodFactsClient()
+    private let searchService = FoodSearchService()
 
     private var recentItems: [FoodItem] {
         Array(allFoodItems.prefix(20))
@@ -39,7 +41,7 @@ struct AddFoodView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ScrollView {
                 VStack(spacing: 12) {
                     searchRow
@@ -48,8 +50,8 @@ struct AddFoodView: View {
                     if trimmedQuery.isEmpty {
                         if !recentItems.isEmpty {
                             FoodResultsCardView(title: "You log these often", items: recentItems) { item in
-                                NavigationLink {
-                                    ProductLookupResultView(foodItem: item, mealSlot: mealSlot, date: date, onLogged: onLogged)
+                                Button {
+                                    path.append(item)
                                 } label: {
                                     RecentFoodRowView(foodItem: item)
                                 }
@@ -71,6 +73,9 @@ struct AddFoodView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
+            }
+            .navigationDestination(for: FoodItem.self) { foodItem in
+                ProductLookupResultView(foodItem: foodItem, mealSlot: mealSlot, date: date, onLogged: onLogged)
             }
             .task(id: searchQuery) {
                 await search()
@@ -105,7 +110,7 @@ struct AddFoodView: View {
             Button(action: onSelectBarcodeScan) {
                 Image(systemName: "barcode.viewfinder")
                     .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color.dashboardCard)
                     .frame(width: 44, height: 44)
                     .background(Color.dashboardInk, in: RoundedRectangle(cornerRadius: 14))
             }
@@ -118,6 +123,7 @@ struct AddFoodView: View {
             SecondaryActionButton(symbol: "text.viewfinder", title: "Scan Label", action: onSelectLabelScan)
             SecondaryActionButton(symbol: "square.and.pencil", title: "Manual", action: onSelectManualEntry)
             SecondaryActionButton(symbol: "clock.arrow.circlepath", title: "Copy Previous", action: onSelectCopyFromPreviousDay)
+            SecondaryActionButton(symbol: "list.bullet.rectangle", title: "Recipes", action: onSelectRecipes)
         }
     }
 
@@ -141,11 +147,16 @@ struct AddFoodView: View {
             ContentUnavailableView.search(text: searchQuery)
                 .padding(.top, 20)
         } else {
-            FoodResultsCardView(title: "Results", items: searchResults) { product in
-                NavigationLink {
-                    ProductLookupResultView(foodItem: resolveFoodItem(for: product), mealSlot: mealSlot, date: date, onLogged: onLogged)
+            FoodResultsCardView(title: "Results", items: searchResults) { result in
+                Button {
+                    // Resolving here (rather than in an inline `NavigationLink` destination
+                    // closure) matters: SwiftUI's closure-based `NavigationLink` evaluates every
+                    // row's destination eagerly inside a `ForEach`, so a `NavigationLink` here
+                    // would insert a `FoodItem` for every visible search result on every re-render
+                    // — this view re-renders on each keystroke via `.task(id: searchQuery)`.
+                    path.append(result.resolveFoodItem(context: modelContext))
                 } label: {
-                    SearchResultRowView(product: product)
+                    FoodSearchResultRowView(result: result)
                 }
                 .buttonStyle(.plain)
             }
@@ -170,29 +181,12 @@ struct AddFoodView: View {
         guard !Task.isCancelled else { return }
 
         do {
-            searchResults = try await client.searchProducts(query: trimmedQuery, countryName: mealSlot.profile?.resolvedFoodSearchCountryName)
+            searchResults = try await searchService.search(query: trimmedQuery, countryName: mealSlot.profile?.resolvedFoodSearchCountryName)
         } catch {
             searchErrorMessage = error.localizedDescription
             searchResults = []
         }
         isLoadingResults = false
-    }
-
-    /// Reuses a cached FoodItem for this barcode if one already exists (e.g. from a previous
-    /// barcode scan) rather than inserting a duplicate — mirrors `BarcodeScanViewModel`'s
-    /// cache-check.
-    private func resolveFoodItem(for product: OFFProduct) -> FoodItem {
-        guard let barcode = product.code, !barcode.isEmpty else {
-            return OpenFoodFactsMapper.makeFoodItem(from: product, barcode: UUID().uuidString)
-        }
-        let descriptor = FetchDescriptor<FoodItem>(predicate: #Predicate { $0.barcode == barcode })
-        if let cached = try? modelContext.fetch(descriptor).first {
-            return cached
-        }
-        let foodItem = OpenFoodFactsMapper.makeFoodItem(from: product, barcode: barcode)
-        modelContext.insert(foodItem)
-        try? modelContext.save()
-        return foodItem
     }
 }
 
@@ -220,104 +214,5 @@ private struct SecondaryActionButton: View {
             .background(Color.dashboardCard, in: RoundedRectangle(cornerRadius: 16))
         }
         .buttonStyle(.plain)
-    }
-}
-
-/// Uppercase label + a card of divided rows — the mockup's "You log these often" / "All results"
-/// treatment, matching the Dashboard's `LoggedMealsCardView` (same index-based divider approach).
-private struct FoodResultsCardView<Item, RowContent: View>: View {
-    let title: String
-    let items: [Item]
-    @ViewBuilder let rowContent: (Item) -> RowContent
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title.uppercased())
-                .font(.manrope(10, weight: .bold))
-                .tracking(1.4)
-                .foregroundStyle(Color.dashboardInkSecondary)
-                .padding(.horizontal, 4)
-
-            VStack(spacing: 0) {
-                ForEach(Array(items.enumerated()), id: \.offset) { index, item in
-                    rowContent(item)
-                        .padding(.horizontal, 15)
-                        .padding(.vertical, 8)
-                    if index < items.count - 1 {
-                        Rectangle()
-                            .fill(Color.dashboardDivider)
-                            .frame(height: 1)
-                            .padding(.leading, 15 + 36 + 12)
-                    }
-                }
-            }
-            .padding(.vertical, 4)
-            .background(Color.dashboardCard, in: RoundedRectangle(cornerRadius: 22))
-        }
-    }
-}
-
-private struct RecentFoodRowView: View {
-    let foodItem: FoodItem
-
-    var body: some View {
-        HStack(spacing: 12) {
-            FoodThumbnailView(urlString: foodItem.imageURLString, shape: Circle(), placeholderColor: .dashboardBarFill)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(foodItem.name)
-                    .font(.manrope(14, weight: .semibold))
-                    .foregroundStyle(Color.dashboardInk)
-                Text("\(Int(foodItem.caloriesPerServing)) cal · \(foodItem.servingSizeDescription)")
-                    .font(.manrope(11, weight: .medium))
-                    .foregroundStyle(Color.dashboardInkSecondary)
-            }
-            Spacer()
-            Image(systemName: "plus.circle.fill")
-                .font(.system(size: 20))
-                .foregroundStyle(Color.dashboardAccent)
-        }
-        .contentShape(Rectangle())
-    }
-}
-
-private struct SearchResultRowView: View {
-    let product: OFFProduct
-
-    private var name: String {
-        let trimmed = product.productName?.trimmingCharacters(in: .whitespacesAndNewlines)
-        return (trimmed?.isEmpty == false) ? trimmed! : "Unknown Product"
-    }
-
-    /// Reuses the mapper purely to derive display figures — nothing here is inserted into the
-    /// model context, that only happens if this result is actually picked.
-    private var preview: FoodItem {
-        OpenFoodFactsMapper.makeFoodItem(from: product, barcode: product.code ?? "")
-    }
-
-    private var subtitle: String {
-        var parts: [String] = []
-        if let brand = product.brands?.trimmingCharacters(in: .whitespacesAndNewlines), !brand.isEmpty {
-            parts.append(brand)
-        }
-        let preview = preview
-        parts.append("\(Int(preview.caloriesPerServing)) cal")
-        parts.append(preview.servingSizeDescription)
-        return parts.joined(separator: " · ")
-    }
-
-    var body: some View {
-        HStack(spacing: 12) {
-            FoodThumbnailView(urlString: product.imageThumbURL, shape: RoundedRectangle(cornerRadius: 11), placeholderColor: .dashboardBarTrack)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(name)
-                    .font(.manrope(14, weight: .semibold))
-                    .foregroundStyle(Color.dashboardInk)
-                Text(subtitle)
-                    .font(.manrope(11, weight: .medium))
-                    .foregroundStyle(Color.dashboardInkSecondary)
-            }
-            Spacer()
-        }
-        .contentShape(Rectangle())
     }
 }

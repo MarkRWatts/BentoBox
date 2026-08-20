@@ -138,4 +138,6 @@ enum FoodSource: String, Codable {
     case openFoodFacts
     case labelScan
     case manual
+    case usda
+    case recipe
 }

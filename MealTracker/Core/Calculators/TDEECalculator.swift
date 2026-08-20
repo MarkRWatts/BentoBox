@@ -6,6 +6,15 @@ struct MacroTargets {
     let fatGrams: Double
 }
 
+/// Fixed/formula-based targets rather than personalized ones — good enough for a first pass,
+/// unlike the macro targets above these aren't tuned per-person beyond scaling with calories.
+struct MicronutrientTargets {
+    let fiberGrams: Double
+    let saturatedFatGrams: Double
+    let sugarGrams: Double
+    let sodiumMg: Double
+}
+
 /// Pure, stateless TDEE/calorie-target math. No persistence or UIKit dependency, unit-testable
 /// in isolation. Only profile *inputs* are ever persisted — these outputs are always recomputed
 /// on demand so the formula can change later without a data migration.
@@ -56,5 +65,22 @@ enum TDEECalculator {
         let calorieTarget = dailyCalorieTarget(for: profile)
         let proteinPerKG = profile.proteinGramsPerKgOverride ?? 1.8
         return macroTargets(calorieTarget: calorieTarget, weightKG: weightKG, proteinGramsPerKG: proteinPerKG)
+    }
+
+    /// Fiber uses the standard US dietary guideline adult values (male/female); saturated fat and
+    /// sugar are capped at 10% of calorie target each (a common general guideline for both, kept
+    /// as a ceiling rather than tuned per-person); sodium is the flat adult upper limit regardless
+    /// of calorie target.
+    static func micronutrientTargets(calorieTarget: Double, sex: BiologicalSex) -> MicronutrientTargets {
+        MicronutrientTargets(
+            fiberGrams: sex == .male ? 38 : 25,
+            saturatedFatGrams: (calorieTarget * 0.10) / 9,
+            sugarGrams: (calorieTarget * 0.10) / 4,
+            sodiumMg: 2300
+        )
+    }
+
+    static func micronutrientTargets(for profile: UserProfile) -> MicronutrientTargets {
+        micronutrientTargets(calorieTarget: dailyCalorieTarget(for: profile), sex: profile.sex)
     }
 }

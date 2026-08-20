@@ -7,6 +7,7 @@ private enum FoodLoggingSheet: Identifiable {
     case labelScan
     case manualEntry
     case copyFromPreviousDay
+    case recipes
 
     var id: Self { self }
 }
@@ -99,6 +100,7 @@ struct MealSlotDetailView: View {
                     onSelectLabelScan: { activeSheet = .labelScan },
                     onSelectManualEntry: { activeSheet = .manualEntry },
                     onSelectCopyFromPreviousDay: { activeSheet = .copyFromPreviousDay },
+                    onSelectRecipes: { activeSheet = .recipes },
                     onLogged: { activeSheet = nil }
                 )
             case .barcodeScan:
@@ -109,6 +111,8 @@ struct MealSlotDetailView: View {
                 ManualFoodEntryView(mealSlot: mealSlot, date: date.atCurrentTimeOfDay)
             case .copyFromPreviousDay:
                 CopyFromPreviousDayView(mealSlot: mealSlot, date: date, onCompleted: { activeSheet = nil })
+            case .recipes:
+                RecipeListView(mealSlot: mealSlot, date: date.atCurrentTimeOfDay, onLogged: { activeSheet = nil })
             }
         }
         .sheet(item: $editingEntry) { entry in

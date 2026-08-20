@@ -12,9 +12,13 @@ struct DashboardViewModel {
         todaysEntries.reduce(0) { $0 + $1.calories }
     }
 
-    /// The target before calorie cycling is applied.
+    /// The target before calorie cycling is applied — the cached adaptive estimate when enabled
+    /// and available (see `AdaptiveTDEECalculator`), otherwise the static Mifflin-St Jeor formula.
     private var baselineCalorieTarget: Double {
-        TDEECalculator.dailyCalorieTarget(for: profile)
+        if profile.isAdaptiveCalorieTargetEnabled, let adaptiveTarget = profile.adaptiveCalorieTarget {
+            return adaptiveTarget
+        }
+        return TDEECalculator.dailyCalorieTarget(for: profile)
     }
 
     private var calorieDayOverridesByWeekday: [Int: Double] {
@@ -51,4 +55,13 @@ struct DashboardViewModel {
     var consumedProtein: Double { todaysEntries.reduce(0) { $0 + $1.proteinGrams } }
     var consumedCarbs: Double { todaysEntries.reduce(0) { $0 + $1.carbGrams } }
     var consumedFat: Double { todaysEntries.reduce(0) { $0 + $1.fatGrams } }
+
+    var micronutrientTargets: MicronutrientTargets {
+        TDEECalculator.micronutrientTargets(calorieTarget: calorieTarget, sex: profile.sex)
+    }
+
+    var consumedFiber: Double { todaysEntries.reduce(0) { $0 + $1.fiberGrams } }
+    var consumedSugar: Double { todaysEntries.reduce(0) { $0 + $1.sugarGrams } }
+    var consumedSaturatedFat: Double { todaysEntries.reduce(0) { $0 + $1.saturatedFatGrams } }
+    var consumedSodiumMg: Double { todaysEntries.reduce(0) { $0 + $1.sodiumMg } }
 }

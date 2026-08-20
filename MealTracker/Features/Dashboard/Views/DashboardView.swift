@@ -13,6 +13,7 @@ struct DashboardView: View {
     @State private var selectedDate = Date().startOfDay
     @State private var isShowingMonthCalendar = false
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.modelContext) private var modelContext
     /// Persisted (not `@State`) so a cold launch on a new calendar day can be detected —
     /// `@State` would already be gone by the time a fresh launch re-creates this view.
     @AppStorage("lastActiveDayStart") private var lastActiveDayStart: Double = 0
@@ -62,13 +63,17 @@ struct DashboardView: View {
                         selectedDate: $selectedDate,
                         profile: profile,
                         entries: profileEntries,
-                        onTapCalendar: { isShowingMonthCalendar = true }
+                        onTapCalendar: { isShowingMonthCalendar = true },
+                        onTapAvatar: { path.append(SettingsRoute()) }
                     )
 
                     DailyOverviewCardView(summary: summary, recentDayProgress: recentDayProgress, selectedDate: selectedDate)
                         .padding(.horizontal, 18)
 
                     MacroBreakdownView(summary: summary)
+                        .padding(.horizontal, 18)
+
+                    MicronutrientBreakdownView(summary: summary)
                         .padding(.horizontal, 18)
 
                     LoggedMealsCardView(
@@ -93,12 +98,16 @@ struct DashboardView: View {
             .navigationDestination(for: MealSlotConfig.self) { slot in
                 MealSlotDetailView(mealSlot: slot, date: selectedDate)
             }
+            .navigationDestination(for: SettingsRoute.self) { _ in
+                SettingsView(profile: profile)
+            }
             .sheet(isPresented: $isShowingMonthCalendar) {
                 MonthCalendarView(selectedDate: $selectedDate, profile: profile, entries: profileEntries)
             }
             .onAppear {
                 writeWidgetSnapshot()
                 resetToTodayIfNewDay()
+                recalculateAdaptiveTargetIfNeeded()
             }
             .onChange(of: selectedDayEntries) { _, _ in writeWidgetSnapshot() }
             .onChange(of: scenePhase) { _, newPhase in
@@ -132,6 +141,26 @@ struct DashboardView: View {
         )
         snapshot.save()
         WidgetCenter.shared.reloadTimelines(ofKind: "MealTrackerCalorieWidget")
+    }
+
+    /// Recomputes and caches `profile.adaptiveCalorieTarget` once a week (matching the cadence
+    /// `AdaptiveTDEECalculator`'s header describes), never on every render — that's what keeps
+    /// the target stable day to day instead of jittering with each new log entry.
+    private func recalculateAdaptiveTargetIfNeeded() {
+        guard profile.isAdaptiveCalorieTargetEnabled else { return }
+        let now = Date()
+        if let updatedAt = profile.adaptiveCalorieTargetUpdatedAt, now.timeIntervalSince(updatedAt) < 7 * 24 * 3600 {
+            return
+        }
+        let dailyCalories = Dictionary(grouping: profileEntries, by: { $0.date.startOfDay })
+            .mapValues { $0.reduce(0) { $0 + $1.calories } }
+        let weights = profile.weightHistory.map { (date: $0.date.startOfDay, weightKG: $0.weightKG) }
+        guard let result = AdaptiveTDEECalculator.estimate(dailyCalories: dailyCalories, weightEntries: weights, referenceDate: now) else {
+            return
+        }
+        profile.adaptiveCalorieTarget = result.tdee
+        profile.adaptiveCalorieTargetUpdatedAt = now
+        try? modelContext.save()
     }
 
     /// Pops any pushed meal slot detail first; only jumps the date once the stack is already at

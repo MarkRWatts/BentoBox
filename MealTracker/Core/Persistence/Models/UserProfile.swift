@@ -12,6 +12,14 @@ final class UserProfile {
     var goalRateKgPerWeek: Double = 0
     var proteinGramsPerKgOverride: Double?
     var isCalorieCyclingEnabled: Bool = false
+    /// Opt-in — when on, `adaptiveCalorieTarget` (once populated) replaces the static
+    /// Mifflin-St Jeor estimate as the baseline calorie target. See `AdaptiveTDEECalculator`.
+    var isAdaptiveCalorieTargetEnabled: Bool = false
+    /// Cached weekly, not recomputed on every read, so the target stays stable day to day rather
+    /// than jittering with each new log entry. Nil until at least
+    /// `AdaptiveTDEECalculator.minimumDays` of logged intake and 2+ weigh-ins exist.
+    var adaptiveCalorieTarget: Double?
+    var adaptiveCalorieTargetUpdatedAt: Date?
     /// Display/input unit preference only — every stored value (this field, calculator inputs)
     /// stays in metric regardless of this setting.
     var weightUnit: WeightUnit = WeightUnit.kilograms
@@ -30,6 +38,9 @@ final class UserProfile {
 
     @Relationship(deleteRule: .cascade, inverse: \DayCalorieOverride.profile)
     var calorieDayOverrides: [DayCalorieOverride] = []
+
+    @Relationship(deleteRule: .cascade, inverse: \Recipe.profile)
+    var recipes: [Recipe] = []
 
     init(
         sex: BiologicalSex,
