@@ -47,6 +47,12 @@ extension Color {
     static let dashboardBarTrack = adaptive(light: 0xDEF0E5, dark: 0x24352C)
     /// Default (not over-target) 7-day bar fill. Mockup: #a9dcc2.
     static let dashboardBarFill = adaptive(light: 0xA9DCC2, dark: 0x3E6B54)
+    /// Faded salmon for a past (non-today) 7-day bar that's over target — the same
+    /// desaturated-pastel relationship `dashboardBarFill` has to `dashboardAccent`, so an
+    /// over-target day recedes into the week the same way an under-target one already does.
+    /// Today's own over-target bar stays the fuller `Color.brandProtein` used for "over" state
+    /// everywhere else (headline caption, macro rings, Trends weekly chart).
+    static let dashboardOverFill = adaptive(light: 0xF0C7AA, dark: 0x6B4B39)
 
     /// Hairline row/section dividers. Mockup: rgba(16,38,29,.07).
     static let dashboardDivider = adaptive(light: (0x10261D, 0.07), dark: (0xFFFFFF, 0.08))
