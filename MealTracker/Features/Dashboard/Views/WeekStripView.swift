@@ -28,6 +28,9 @@ struct WeekStripView: View {
     /// card wide enough to give the scroll content a definite width, which sized the day columns
     /// at 20pt and left the wrong day sitting under the caret.
     @State private var stripWidth: CGFloat = 0
+    /// Only for the greeting's name — the strip itself doesn't care who's signed in, and a
+    /// local-only account simply gets the greeting without a name.
+    @Environment(AuthManager.self) private var authManager
 
     init(
         selectedDate: Binding<Date>,
@@ -90,9 +93,20 @@ struct WeekStripView: View {
         VStack(spacing: 12) {
             HStack(alignment: .center) {
                 AvatarButton(action: onTapAvatar)
-                Text(headingText)
-                    .font(.archivo(30, weight: .semibold))
-                    .foregroundStyle(Color.dashboardInk)
+                // Greeting and date share the height the date alone used to have: the date drops
+                // from 30pt to 26pt and the top padding tightens to match, so the header block
+                // ends at the same divider it always did rather than pushing the cards down.
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(DayGreeting.text(at: Date(), name: authManager.displayName))
+                        .font(.manrope(11.5, weight: .semibold))
+                        .foregroundStyle(Color.dashboardInkSecondary)
+                        .lineLimit(1)
+                    Text(headingText)
+                        .font(.archivo(26, weight: .semibold))
+                        .foregroundStyle(Color.dashboardInk)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
                 Spacer()
                 Button(action: onTapCalendar) {
                     Image(systemName: "calendar")
@@ -104,7 +118,7 @@ struct WeekStripView: View {
                 .accessibilityLabel("Choose Date")
             }
             .padding(.horizontal)
-            .padding(.top, 16)
+            .padding(.top, 10)
 
             Rectangle()
                 .fill(Color.dashboardDivider)
