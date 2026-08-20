@@ -206,7 +206,7 @@ struct WeekStripView: View {
                     .padding(.top, 12)
 
                 Circle()
-                    .fill(hasEntries ? Color.dashboardAccent : Color.dashboardBarTrack)
+                    .fill(hasEntries ? (isSelected ? Color.dashboardAccent : Color.dashboardBarFill) : Color.dashboardBarTrack)
                     .frame(width: 44, height: 44)
             }
             .frame(maxWidth: .infinity)
