@@ -64,7 +64,6 @@ struct MealSlotDetailView: View {
                         }
                     }
                     .buttonStyle(.plain)
-                    .listRowBackground(Color.dashboardCard)
                     // Full swipe deliberately off: the gesture reveals the button and the copy
                     // needs a tap, rather than a long swipe silently opening the sheet.
                     .swipeActions(edge: .leading, allowsFullSwipe: false) {
@@ -84,8 +83,13 @@ struct MealSlotDetailView: View {
                     .foregroundStyle(Color.dashboardAccent)
             }
         }
-        .scrollContentBackground(.hidden)
-        .background(Color.dashboardCanvas)
+        // Deliberately no `.listRowBackground` / hidden scroll background here, unlike the rest
+        // of the app's screens: a custom row background is a SwiftUI view hosted inside each
+        // cell, and the swipe reveal has to re-composite it every frame, which showed up as the
+        // action icons visibly expanding into place instead of sliding out. The tokens those
+        // modifiers set are the system's own colours anyway — `dashboardCanvas` *is*
+        // `systemGroupedBackground` and `dashboardCard` matches `secondarySystemGroupedBackground`
+        // — so letting `List` draw its native cells looks identical and animates natively.
         .navigationTitle(navigationTitleText)
         .navigationBarTitleDisplayMode(.inline)
         .overlay(alignment: .bottomTrailing) {
