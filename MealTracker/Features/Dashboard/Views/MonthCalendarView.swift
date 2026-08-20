@@ -128,7 +128,10 @@ struct MonthCalendarView: View {
             selectedDate = day
             dismiss()
         } label: {
-            VStack(spacing: 2) {
+            // Spacing has to clear the "today" ring, not just the dot: the ring is an overlay
+            // inset by -3, so it paints 3pt outside the circle while taking no layout space of
+            // its own, and a 2pt gap left it sitting right on top of the date underneath.
+            VStack(spacing: 6) {
                 Circle()
                     .fill(hasEntries ? Color.accentColor : Color.secondary.opacity(0.25))
                     .frame(width: 34, height: 34)
@@ -142,7 +145,7 @@ struct MonthCalendarView: View {
                     .font(.caption2)
                     .foregroundStyle(isInDisplayedMonth ? .primary : .secondary)
             }
-            .padding(4)
+            .padding(6)
             .frame(maxWidth: .infinity)
             .background {
                 if isSelected {
