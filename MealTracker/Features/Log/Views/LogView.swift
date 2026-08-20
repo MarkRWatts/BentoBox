@@ -78,6 +78,7 @@ struct LogView: View {
         let entries = profileEntries
         let selectedDayEntries = entries.filter { $0.date >= selectedDate.startOfDay && $0.date < selectedDate.endOfDay }
         let summary = summary(for: selectedDayEntries)
+        let entriesByDay = DayProgressCalculator.entriesByDay(entries)
 
         return NavigationStack(path: $path) {
             ScrollView {
@@ -138,7 +139,8 @@ struct LogView: View {
                 MonthCalendarView(
                     selectedDate: $dayContext.selectedDate,
                     profile: profile,
-                    daysWithEntries: DayProgressCalculator.daysWithEntries(entries)
+                    daysWithEntries: DayProgressCalculator.daysWithEntries(entries),
+                    daysOverTarget: DayProgressCalculator.daysOverTarget(from: entriesByDay, profile: profile)
                 )
             }
         }

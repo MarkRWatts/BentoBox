@@ -31,6 +31,16 @@ enum DayProgressCalculator {
         Dictionary(grouping: entries, by: { $0.date.startOfDay })
     }
 
+    /// Start-of-day keys for the days (within `entriesByDay`) whose calories ended up over
+    /// target. Only ever checks days that already have entries — a day with nothing logged can
+    /// never be "over" — so this stays cheap regardless of how far back a screen scrolls.
+    static func daysOverTarget(from entriesByDay: [Date: [LoggedEntry]], profile: UserProfile) -> Set<Date> {
+        Set(entriesByDay.compactMap { day, dayEntries in
+            let progress = dayProgress(for: day, profile: profile, entries: dayEntries)
+            return progress.caloriesConsumed > progress.caloriesTarget ? day : nil
+        })
+    }
+
     static func dayProgress(for date: Date, profile: UserProfile, entries: [LoggedEntry]) -> DayProgress {
         let dayEntries = entries.filter { $0.date >= date.startOfDay && $0.date < date.endOfDay }
         let weekday = Calendar.current.component(.weekday, from: date)

@@ -8,14 +8,18 @@ struct MonthCalendarView: View {
     @Binding var selectedDate: Date
     let profile: UserProfile
     let daysWithEntries: Set<Date>
+    /// Start-of-day keys for the (necessarily also `daysWithEntries`) days whose calories ended
+    /// up over target — see `DashboardView.daysOverTarget(from:)`.
+    let daysOverTarget: Set<Date>
 
     @Environment(\.dismiss) private var dismiss
     @State private var displayedMonth: Date
 
-    init(selectedDate: Binding<Date>, profile: UserProfile, daysWithEntries: Set<Date>) {
+    init(selectedDate: Binding<Date>, profile: UserProfile, daysWithEntries: Set<Date>, daysOverTarget: Set<Date>) {
         self._selectedDate = selectedDate
         self.profile = profile
         self.daysWithEntries = daysWithEntries
+        self.daysOverTarget = daysOverTarget
         self._displayedMonth = State(initialValue: selectedDate.wrappedValue)
     }
 
@@ -117,12 +121,22 @@ struct MonthCalendarView: View {
         }
     }
 
+    /// Same five-way scheme as `WeekStripView`'s dots: grey for no entries, the faded/bold
+    /// salmon pair for over-target, the faded/bold green pair for under-target — bold reserved
+    /// for the currently viewed (`isSelected`) day.
+    private func dotColor(isSelected: Bool, hasEntries: Bool, isOver: Bool) -> Color {
+        guard hasEntries else { return .dashboardEmptyTrack }
+        if isOver { return isSelected ? .brandProtein : .dashboardOverFill }
+        return isSelected ? .dashboardAccent : .dashboardBarFill
+    }
+
     @ViewBuilder
     private func dayCell(_ day: Date) -> some View {
         let isInDisplayedMonth = calendar.isDate(day, equalTo: displayedMonth, toGranularity: .month)
         let isSelected = calendar.isDate(day, inSameDayAs: selectedDate)
         let isToday = calendar.isDateInToday(day)
         let hasEntries = daysWithEntries.contains(day.startOfDay)
+        let isOver = daysOverTarget.contains(day.startOfDay)
 
         Button {
             selectedDate = day
@@ -133,7 +147,7 @@ struct MonthCalendarView: View {
             // its own, and a 2pt gap left it sitting right on top of the date underneath.
             VStack(spacing: 6) {
                 Circle()
-                    .fill(hasEntries ? Color.accentColor : Color.secondary.opacity(0.25))
+                    .fill(dotColor(isSelected: isSelected, hasEntries: hasEntries, isOver: isOver))
                     .frame(width: 34, height: 34)
                     .opacity(isInDisplayedMonth ? 1 : 0.3)
                     .overlay {

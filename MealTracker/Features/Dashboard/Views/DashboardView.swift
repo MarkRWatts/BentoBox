@@ -76,17 +76,6 @@ struct DashboardView: View {
         }
     }
 
-    /// Start-of-day keys for the days whose calories ended up over target — feeds the week
-    /// strip's dots. Computed only over days that actually have entries (the dictionary's keys),
-    /// not the strip's whole ~2-year scrollable range, since a day with nothing logged can never
-    /// be "over".
-    private func daysOverTarget(from entriesByDay: [Date: [LoggedEntry]]) -> Set<Date> {
-        Set(entriesByDay.compactMap { day, dayEntries in
-            let progress = DayProgressCalculator.dayProgress(for: day, profile: profile, entries: dayEntries)
-            return progress.caloriesConsumed > progress.caloriesTarget ? day : nil
-        })
-    }
-
     private var navigationTitleText: String {
         if Calendar.current.isDateInToday(selectedDate) { return "Today" }
         if Calendar.current.isDateInYesterday(selectedDate) { return "Yesterday" }
@@ -101,6 +90,7 @@ struct DashboardView: View {
         let entries = profileEntries
         let entriesByDay = DayProgressCalculator.entriesByDay(entries)
         let daysWithEntries = DayProgressCalculator.daysWithEntries(entries)
+        let daysOverTarget = DayProgressCalculator.daysOverTarget(from: entriesByDay, profile: profile)
         let summary = summary(for: entries)
         // Watched below instead of the day's entries array: comparing that array meant rebuilding
         // it (and so re-filtering the whole log) on every render just to decide whether the
@@ -114,7 +104,7 @@ struct DashboardView: View {
                     WeekStripView(
                         selectedDate: $dayContext.selectedDate,
                         daysWithEntries: daysWithEntries,
-                        daysOverTarget: daysOverTarget(from: entriesByDay),
+                        daysOverTarget: daysOverTarget,
                         onTapCalendar: { isShowingMonthCalendar = true },
                         onTapAvatar: { path.append(SettingsRoute()) }
                     )
@@ -155,7 +145,12 @@ struct DashboardView: View {
                 }
             }
             .sheet(isPresented: $isShowingMonthCalendar) {
-                MonthCalendarView(selectedDate: $dayContext.selectedDate, profile: profile, daysWithEntries: daysWithEntries)
+                MonthCalendarView(
+                    selectedDate: $dayContext.selectedDate,
+                    profile: profile,
+                    daysWithEntries: daysWithEntries,
+                    daysOverTarget: daysOverTarget
+                )
             }
             .onAppear {
                 writeWidgetSnapshot()
