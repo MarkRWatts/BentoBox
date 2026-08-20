@@ -47,4 +47,20 @@ struct UnitConversionTests {
         let roundTripped = UnitConversion.feetAndInchesToCm(feet: feet, inches: inches)
         #expect(abs(roundTripped - original) < 0.0001)
     }
+
+    @Test func mlToFluidOuncesKnownValue() {
+        // 500 ml ≈ 16.9 US fl oz
+        #expect(abs(UnitConversion.mlToFluidOunces(500) - 16.907) < 0.01)
+    }
+
+    @Test func fluidOuncesToMLRoundTripsWithMLToFluidOunces() {
+        let original = 473.2
+        let roundTripped = UnitConversion.fluidOuncesToML(UnitConversion.mlToFluidOunces(original))
+        #expect(abs(roundTripped - original) < 0.0001)
+    }
+
+    @Test func volumeUnitFormatsAStoredMLValueInThePreferredUnit() {
+        #expect(VolumeUnit.milliliters.displayString(fromML: 250) == "250 ml")
+        #expect(VolumeUnit.fluidOunces.displayString(fromML: 250) == "8 fl oz")
+    }
 }

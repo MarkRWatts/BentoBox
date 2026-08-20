@@ -6,7 +6,7 @@ enum MealTrackerSchemaV1: VersionedSchema {
     static var models: [any PersistentModel.Type] {
         [
             UserProfile.self, BodyMetricEntry.self, MealSlotConfig.self, FoodItem.self, LoggedEntry.self,
-            DayCalorieOverride.self, Recipe.self, RecipeIngredient.self
+            DayCalorieOverride.self, Recipe.self, RecipeIngredient.self, WaterLogEntry.self
         ]
     }
 }

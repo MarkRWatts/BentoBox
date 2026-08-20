@@ -1,9 +1,9 @@
 import Foundation
 
-/// Exports a profile's logged meals and weight history as CSV, written to a temp file for
-/// `ShareLink` to hand off to the system share sheet. Reads straight off the profile's own
-/// SwiftData relationships (`mealSlots.entries`, `weightHistory`) rather than a `ModelContext`
-/// fetch — everything needed is already loaded in memory once a profile exists.
+/// Exports a profile's logged meals, weight history and water log as CSV, written to a temp
+/// file for `ShareLink` to hand off to the system share sheet. Reads straight off the profile's
+/// own SwiftData relationships (`mealSlots.entries`, `weightHistory`, `waterLog`) rather than a
+/// `ModelContext` fetch — everything needed is already loaded in memory once a profile exists.
 enum DataExporter {
     static func exportMealsCSV(profile: UserProfile) -> URL? {
         let entries = profile.mealSlots.flatMap(\.entries).sorted { $0.date < $1.date }
@@ -41,6 +41,21 @@ enum DataExporter {
             csv += "\(dateFormatter.string(from: entry.date)),\(number(entry.weightKG))\n"
         }
         return write(csv, filename: "cal-track-weight.csv")
+    }
+
+    static func exportWaterCSV(profile: UserProfile) -> URL? {
+        let entries = profile.waterLog.sorted { $0.date < $1.date }
+
+        var csv = "Date,Time,Volume (ml)\n"
+        for entry in entries {
+            let fields = [
+                dateFormatter.string(from: entry.date),
+                timeFormatter.string(from: entry.date),
+                number(entry.volumeML)
+            ]
+            csv += fields.joined(separator: ",") + "\n"
+        }
+        return write(csv, filename: "cal-track-water.csv")
     }
 
     // MARK: - Formatting

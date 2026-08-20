@@ -9,6 +9,7 @@ struct DashboardView: View {
 
     @Query(sort: \MealSlotConfig.sortOrder) private var allMealSlots: [MealSlotConfig]
     @Query(sort: \LoggedEntry.date) private var allEntries: [LoggedEntry]
+    @Query(sort: \WaterLogEntry.date) private var allWaterEntries: [WaterLogEntry]
     @State private var path = NavigationPath()
     @State private var selectedDate = Date().startOfDay
     @State private var isShowingMonthCalendar = false
@@ -31,6 +32,12 @@ struct DashboardView: View {
 
     private var selectedDayEntries: [LoggedEntry] {
         profileEntries.filter { $0.date >= selectedDate.startOfDay && $0.date < selectedDate.endOfDay }
+    }
+
+    private var selectedDayWaterEntries: [WaterLogEntry] {
+        allWaterEntries.filter {
+            $0.profile?.id == profile.id && $0.date >= selectedDate.startOfDay && $0.date < selectedDate.endOfDay
+        }
     }
 
     private var summary: DashboardViewModel {
@@ -75,6 +82,18 @@ struct DashboardView: View {
 
                     MicronutrientBreakdownView(summary: summary)
                         .padding(.horizontal, 18)
+
+                    if profile.isWaterTrackingEnabled {
+                        WaterCardView(profile: profile, entries: selectedDayWaterEntries, date: selectedDate)
+                            .padding(.horizontal, 18)
+                    }
+
+                    // Today only — a running fast is a right-now state, not something to browse
+                    // a past day for.
+                    if profile.isFastingTimerEnabled, Calendar.current.isDateInToday(selectedDate) {
+                        FastingCardView(profile: profile)
+                            .padding(.horizontal, 18)
+                    }
 
                     LoggedMealsCardView(
                         mealSlots: mealSlots,

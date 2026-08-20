@@ -160,6 +160,15 @@ struct SettingsView: View {
                     }
                 }
                 NavigationLink {
+                    HydrationEditorView(profile: profile)
+                } label: {
+                    Label {
+                        Text("Water & Fasting")
+                    } icon: {
+                        SettingsRowIcon(symbol: "drop.fill", color: .brandCarbs)
+                    }
+                }
+                NavigationLink {
                     CalorieCyclingEditorView(profile: profile)
                 } label: {
                     Label {
@@ -195,7 +204,11 @@ struct SettingsView: View {
     }
 
     private var exportURLs: [URL] {
-        [DataExporter.exportMealsCSV(profile: profile), DataExporter.exportWeightCSV(profile: profile)].compactMap { $0 }
+        [
+            DataExporter.exportMealsCSV(profile: profile),
+            DataExporter.exportWeightCSV(profile: profile),
+            DataExporter.exportWaterCSV(profile: profile)
+        ].compactMap { $0 }
     }
 
     /// Only reachable from local-only mode, where `lastSignedInGoogleUserID` is still nil (no

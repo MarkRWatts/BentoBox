@@ -19,6 +19,7 @@ enum LocalDataStore {
         try? context.delete(model: FoodItem.self)
         try? context.delete(model: MealSlotConfig.self)
         try? context.delete(model: BodyMetricEntry.self)
+        try? context.delete(model: WaterLogEntry.self)
         try? context.delete(model: DayCalorieOverride.self)
         try? context.delete(model: UserProfile.self)
         try? context.save()

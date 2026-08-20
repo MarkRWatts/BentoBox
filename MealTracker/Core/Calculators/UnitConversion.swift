@@ -9,6 +9,9 @@ enum UnitConversion {
     private static let poundsPerStone = 14.0
     private static let cmPerInch = 2.54
     private static let inchesPerFoot = 12.0
+    /// US customary fluid ounce, not the imperial one (28.4131ml) — matches what US nutrition
+    /// labels and every US-facing tracker mean by "fl oz".
+    private static let mlPerFluidOunce = 29.5735295625
 
     static func kgToPounds(_ kg: Double) -> Double { kg / kgPerPound }
     static func poundsToKg(_ lb: Double) -> Double { lb * kgPerPound }
@@ -37,4 +40,7 @@ enum UnitConversion {
     static func feetAndInchesToCm(feet: Int, inches: Double) -> Double {
         inchesToCm((Double(feet) * inchesPerFoot) + inches)
     }
+
+    static func mlToFluidOunces(_ ml: Double) -> Double { ml / mlPerFluidOunce }
+    static func fluidOuncesToML(_ fluidOunces: Double) -> Double { fluidOunces * mlPerFluidOunce }
 }

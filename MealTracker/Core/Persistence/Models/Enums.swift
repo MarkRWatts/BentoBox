@@ -141,3 +141,41 @@ enum FoodSource: String, Codable {
     case usda
     case recipe
 }
+
+enum VolumeUnit: String, Codable, CaseIterable, Identifiable {
+    case milliliters
+    case fluidOunces
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .milliliters: return "ml"
+        case .fluidOunces: return "fl oz"
+        }
+    }
+
+    /// Converts a canonical ml value into this unit, unformatted — for building `Text` runs that
+    /// need the number and the unit styled separately (see `WaterCardView`'s header).
+    func value(fromML ml: Double) -> Double {
+        switch self {
+        case .milliliters: return ml
+        case .fluidOunces: return UnitConversion.mlToFluidOunces(ml)
+        }
+    }
+
+    /// Formats a canonical ml value for display in this unit.
+    func displayString(fromML ml: Double) -> String {
+        "\(Int(value(fromML: ml).rounded())) \(displayName)"
+    }
+
+    /// How much a `Stepper` should move a target or glass size per tap, in ml — chosen so the
+    /// number the user actually sees moves in whole, round increments in either unit rather than
+    /// in the awkward fractions a fixed ml step would produce once converted to fluid ounces.
+    var stepML: Double {
+        switch self {
+        case .milliliters: return 50
+        case .fluidOunces: return UnitConversion.fluidOuncesToML(2)
+        }
+    }
+}

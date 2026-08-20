@@ -17,6 +17,7 @@ A native iOS calorie and meal tracker — barcode scanning, on-device nutrition-
   - **Date navigation** — a Mon–Sun week strip (each day showing a progress ring glyph) plus a month calendar sheet for jumping further back or forward.
   - **Today shortcut** — tapping the already-active "Today" tab pops any pushed meal detail and then jumps back to today's date, mirroring the standard iOS re-tap-current-tab idiom; the dashboard also snaps back to today on its own the first time it's opened on a new calendar day.
 - **Calorie cycling** — set higher-calorie days (e.g. Friday/Saturday); every other day automatically absorbs the opposite delta so the weekly total (and macros) stay unchanged.
+- **Water & fasting** — both optional, per-profile: a Dashboard water card where one tap logs a glass (target, glass size and ml/fl oz set in Settings), and a fasting timer whose clock keeps running while the app is closed, with an editable start time for when you remember to start it late.
 - **Trends tab** — weekly calorie and macro summary cards (Mon–Sun, with back/forward navigation), weight and calorie history charts, a weekly insights card (days on/over target, average % of target, weight trend), and:
   - **BMI tracking** — current BMI, category, trend chart, and a target BMI/weight aimed at the midpoint of the normal range.
   - **Weight tracking** — matching styling to the BMI screen, gauge scaled to this person's height.
@@ -52,7 +53,7 @@ Run `xcodegen generate` again any time `project.yml` changes — it fully regene
 xcodebuild -project MealTracker.xcodeproj -scheme MealTracker -destination 'platform=iOS Simulator,name=iPhone 17' test
 ```
 
-83 tests across 15 suites, covering every pure calculator (TDEE, BMI, calorie cycling, unit conversion, insights, day progress), the Open Food Facts DTO mapping, and the SwiftUI view models (including the weekly Trends cards). Camera, OCR/Foundation Models, and widget behavior aren't covered by the test suite and need manual on-device verification.
+124 tests across 21 suites, covering every pure calculator (TDEE, BMI, calorie cycling, unit conversion, insights, day progress, water intake, fasting timer), the Open Food Facts DTO mapping, and the SwiftUI view models (including the weekly Trends cards). Camera, OCR/Foundation Models, and widget behavior aren't covered by the test suite and need manual on-device verification.
 
 ## Architecture
 
