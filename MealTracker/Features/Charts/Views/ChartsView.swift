@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import Charts
 
 struct ChartsView: View {
     let profile: UserProfile
@@ -58,6 +59,12 @@ struct ChartsView: View {
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets())
                 }
+
+                Section {
+                    CalorieTrendChartView(points: summary.calorieTrendPoints, target: summary.calorieTarget)
+                }
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets())
 
                 Section {
                     StreakCardView(streakDays: summary.currentStreakDays)
@@ -341,6 +348,52 @@ private struct BMISummaryRowView: View {
                     .foregroundStyle(.secondary)
             }
         }
+    }
+}
+
+/// The card the "Range" picker actually drives — a per-day calorie bar for whatever window is
+/// selected, colored with the same over/under-target pair used everywhere else (`brandProtein` /
+/// `dashboardAccent`) rather than a chart-local palette. Restores what `CalorieTrendChartView`
+/// did before the Claude Design pass, which replaced this section with the fixed-7-day
+/// `VerdictCardView` and accidentally left the picker driving nothing.
+private struct CalorieTrendChartView: View {
+    let points: [CalorieTrendPoint]
+    let target: Double
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("CALORIES")
+                .font(.manrope(10, weight: .bold))
+                .tracking(1.4)
+                .foregroundStyle(Color.dashboardInkSecondary)
+
+            if points.isEmpty {
+                ContentUnavailableView("No Meals Logged", systemImage: "chart.bar.fill", description: Text("Log a meal to see your calorie trend here."))
+                    .frame(height: 180)
+            } else {
+                Chart {
+                    ForEach(points) { point in
+                        BarMark(x: .value("Date", point.date, unit: .day), y: .value("Calories", point.calories))
+                            .foregroundStyle(point.calories > target ? Color.brandProtein : Color.dashboardAccent)
+                            .cornerRadius(4)
+                    }
+                    RuleMark(y: .value("Target", target))
+                        .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [4, 4]))
+                        .foregroundStyle(.secondary)
+                        .annotation(position: .top, alignment: .leading) {
+                            Text("Target: \(Int(target))")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                }
+                .frame(height: 180)
+                .accessibilityLabel("Calorie trend over time")
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.dashboardCard, in: RoundedRectangle(cornerRadius: 20))
+        .accessibilityElement(children: .combine)
     }
 }
 
