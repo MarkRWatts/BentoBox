@@ -4,20 +4,29 @@ import WidgetKit
 
 struct DashboardView: View {
     let profile: UserProfile
+    /// Shared with the Log tab, so browsing to a past day here means the Log tab logs into that
+    /// same day. See `DayContext` for why this is an object rather than a `@Binding`.
+    @Bindable var dayContext: DayContext
     /// Changes each time the already-active "Today" tab is tapped again — see `MainTabView`.
     let goToTodayTrigger: UUID
 
     @Query(sort: \MealSlotConfig.sortOrder) private var allMealSlots: [MealSlotConfig]
     @Query(sort: \LoggedEntry.date) private var allEntries: [LoggedEntry]
-    @Query(sort: \WaterLogEntry.date) private var allWaterEntries: [WaterLogEntry]
     @State private var path = NavigationPath()
-    @State private var selectedDate = Date().startOfDay
     @State private var isShowingMonthCalendar = false
+    @State private var isQuickAddingFood = false
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.modelContext) private var modelContext
     /// Persisted (not `@State`) so a cold launch on a new calendar day can be detected —
     /// `@State` would already be gone by the time a fresh launch re-creates this view.
     @AppStorage("lastActiveDayStart") private var lastActiveDayStart: Double = 0
+
+    /// Read/write shortcut for `dayContext.selectedDate`, so the rest of this view reads the way
+    /// it did when the date was local state.
+    private var selectedDate: Date {
+        get { dayContext.selectedDate }
+        nonmutating set { dayContext.selectedDate = newValue }
+    }
 
     private var mealSlots: [MealSlotConfig] {
         allMealSlots.filter { $0.isEnabled && $0.profile?.id == profile.id }
@@ -34,10 +43,11 @@ struct DashboardView: View {
         profileEntries.filter { $0.date >= selectedDate.startOfDay && $0.date < selectedDate.endOfDay }
     }
 
-    private var selectedDayWaterEntries: [WaterLogEntry] {
-        allWaterEntries.filter {
-            $0.profile?.id == profile.id && $0.date >= selectedDate.startOfDay && $0.date < selectedDate.endOfDay
-        }
+    /// Which slot the quick-add button starts on — a guess from the clock, correctable in the
+    /// sheet itself. Nil only when every slot has been disabled, in which case there's nothing
+    /// to log into and the button is hidden rather than shown broken.
+    private var quickAddSlot: MealSlotConfig? {
+        MealSlotSuggestion.suggestedSlot(at: Date(), from: mealSlots)
     }
 
     private var summary: DashboardViewModel {
@@ -67,7 +77,7 @@ struct DashboardView: View {
             ScrollView {
                 VStack(spacing: 12) {
                     WeekStripView(
-                        selectedDate: $selectedDate,
+                        selectedDate: $dayContext.selectedDate,
                         profile: profile,
                         entries: profileEntries,
                         onTapCalendar: { isShowingMonthCalendar = true },
@@ -82,31 +92,17 @@ struct DashboardView: View {
 
                     MicronutrientBreakdownView(summary: summary)
                         .padding(.horizontal, 18)
-
-                    if profile.isWaterTrackingEnabled {
-                        WaterCardView(profile: profile, entries: selectedDayWaterEntries, date: selectedDate)
-                            .padding(.horizontal, 18)
-                    }
-
-                    // Today only — a running fast is a right-now state, not something to browse
-                    // a past day for.
-                    if profile.isFastingTimerEnabled, Calendar.current.isDateInToday(selectedDate) {
-                        FastingCardView(profile: profile)
-                            .padding(.horizontal, 18)
-                    }
-
-                    LoggedMealsCardView(
-                        mealSlots: mealSlots,
-                        selectedDayEntries: selectedDayEntries,
-                        totalCalories: summary.consumedCalories,
-                        calorieTarget: summary.calorieTarget,
-                        isToday: Calendar.current.isDateInToday(selectedDate)
-                    )
-                    .padding(.horizontal, 18)
-                    .padding(.bottom, 24)
+                        // Deep enough that the last card can still be scrolled clear of the
+                        // quick-add button sitting over it.
+                        .padding(.bottom, 88)
                 }
             }
             .background(Color.dashboardCanvas)
+            .overlay(alignment: .bottomTrailing) {
+                if quickAddSlot != nil {
+                    FloatingAddButton(accessibilityLabel: "Log Food") { isQuickAddingFood = true }
+                }
+            }
             // Title kept (but not shown — see below) purely so a pushed `MealSlotDetailView`
             // still gets a sensible default back-button label; the visible header is
             // `WeekStripView`'s own big date heading instead, which now also hosts the calendar
@@ -114,14 +110,16 @@ struct DashboardView: View {
             .navigationTitle(navigationTitleText)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(.hidden, for: .navigationBar)
-            .navigationDestination(for: MealSlotConfig.self) { slot in
-                MealSlotDetailView(mealSlot: slot, date: selectedDate)
-            }
             .navigationDestination(for: SettingsRoute.self) { _ in
                 SettingsView(profile: profile)
             }
+            .sheet(isPresented: $isQuickAddingFood) {
+                if let quickAddSlot {
+                    FoodLoggingFlowView(initialSlot: quickAddSlot, date: selectedDate, slotOptions: mealSlots)
+                }
+            }
             .sheet(isPresented: $isShowingMonthCalendar) {
-                MonthCalendarView(selectedDate: $selectedDate, profile: profile, entries: profileEntries)
+                MonthCalendarView(selectedDate: $dayContext.selectedDate, profile: profile, entries: profileEntries)
             }
             .onAppear {
                 writeWidgetSnapshot()
@@ -206,118 +204,5 @@ struct DashboardView: View {
             path = NavigationPath()
         }
         lastActiveDayStart = today.timeIntervalSince1970
-    }
-}
-
-private enum LoggedViewStyle {
-    case byMeal, timeline
-}
-
-/// "Logged" card — a literal port of the mockup's meal list: an uppercase label + running total
-/// above a card of divided rows. Built by hand (rather than a `List` `Section`, which is what the
-/// rest of this screen used before this pass) so the card's corner radius, row insets and divider
-/// styling can match the mockup exactly instead of iOS's fixed inset-grouped chrome. A header
-/// toggle (from the Claude Design "Timeline-first" direction, #1c) switches the body between this
-/// by-meal grouping and a chronological thread of the same entries.
-private struct LoggedMealsCardView: View {
-    let mealSlots: [MealSlotConfig]
-    let selectedDayEntries: [LoggedEntry]
-    let totalCalories: Double
-    let calorieTarget: Double
-    let isToday: Bool
-
-    @State private var viewStyle: LoggedViewStyle = .byMeal
-    /// Timeline rows edit inline via this sheet, since (unlike `MealSlotGroupedListView`'s rows)
-    /// they don't already sit behind a `NavigationLink` push into `MealSlotDetailView`.
-    @State private var editingEntry: LoggedEntry?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("LOGGED")
-                    .font(.manrope(10, weight: .bold))
-                    .tracking(1.4)
-                    .foregroundStyle(Color.dashboardInkSecondary)
-                Spacer()
-                LoggedViewToggle(viewStyle: $viewStyle)
-                Spacer()
-                Text("\(Int(totalCalories)) kcal")
-                    .font(.manrope(12, weight: .semibold))
-                    .foregroundStyle(Color.dashboardAccent)
-            }
-            .padding(.horizontal, 4)
-
-            switch viewStyle {
-            case .byMeal:
-                MealSlotGroupedListView(mealSlots: mealSlots, selectedDayEntries: selectedDayEntries)
-            case .timeline:
-                EntryTimelineView(
-                    entries: selectedDayEntries.sorted { $0.date < $1.date },
-                    calorieTarget: calorieTarget,
-                    isToday: isToday,
-                    onSelectEntry: { editingEntry = $0 }
-                )
-                .padding(16)
-                .background(Color.dashboardCard, in: RoundedRectangle(cornerRadius: 24))
-            }
-        }
-        .sheet(item: $editingEntry) { entry in
-            EditLoggedEntryView(entry: entry)
-        }
-    }
-}
-
-private struct MealSlotGroupedListView: View {
-    let mealSlots: [MealSlotConfig]
-    let selectedDayEntries: [LoggedEntry]
-
-    var body: some View {
-        VStack(spacing: 0) {
-            ForEach(Array(mealSlots.enumerated()), id: \.element.id) { index, slot in
-                NavigationLink(value: slot) {
-                    MealSlotRowView(mealSlot: slot, entries: selectedDayEntries.filter { $0.mealSlot?.id == slot.id })
-                }
-                .buttonStyle(.plain)
-                .padding(.horizontal, 15)
-
-                if index < mealSlots.count - 1 {
-                    Rectangle()
-                        .fill(Color.dashboardDivider)
-                        .frame(height: 1)
-                        .padding(.leading, 15 + 44 + 13)
-                }
-            }
-        }
-        .padding(.vertical, 6)
-        .background(Color.dashboardCard, in: RoundedRectangle(cornerRadius: 24))
-    }
-}
-
-/// Two-icon capsule, styled after the Claude Design mockup's Week/Month segmented toggle (#1e):
-/// a tinted track with the active option raised on a card-colored pill.
-private struct LoggedViewToggle: View {
-    @Binding var viewStyle: LoggedViewStyle
-
-    var body: some View {
-        HStack(spacing: 2) {
-            option(.byMeal, symbol: "list.bullet")
-            option(.timeline, symbol: "clock")
-        }
-        .padding(3)
-        .background(Color.dashboardBarTrack, in: Capsule())
-    }
-
-    private func option(_ style: LoggedViewStyle, symbol: String) -> some View {
-        let isSelected = viewStyle == style
-        return Button {
-            viewStyle = style
-        } label: {
-            Image(systemName: symbol)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(isSelected ? Color.dashboardInk : Color.dashboardInkSecondary)
-                .frame(width: 26, height: 22)
-                .background(isSelected ? Color.dashboardCard : Color.clear, in: Capsule())
-        }
-        .buttonStyle(.plain)
     }
 }

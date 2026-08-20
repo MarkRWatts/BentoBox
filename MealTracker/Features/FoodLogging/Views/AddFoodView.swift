@@ -11,7 +11,13 @@ import SwiftData
 /// scanning as a companion action — label scan, manual entry, copy-from-previous-day and recipes
 /// are real features it didn't design for, so those live in a compact secondary-actions row instead.
 struct AddFoodView: View {
-    let mealSlot: MealSlotConfig
+    /// A binding, not a value: the Dashboard's quick-add starts on a *guessed* slot (see
+    /// `MealSlotSuggestion`), and retargeting it here has to reach the barcode/label/manual
+    /// routes too, which `FoodLoggingFlowView` launches from the same state.
+    @Binding var mealSlot: MealSlotConfig
+    /// Slots this sheet may be retargeted to. Empty (the default) hides the chip entirely, which
+    /// is what opening from a meal slot's own screen wants.
+    var slotOptions: [MealSlotConfig] = []
     var date: Date = Date()
     var onSelectBarcodeScan: () -> Void
     var onSelectLabelScan: () -> Void
@@ -44,6 +50,9 @@ struct AddFoodView: View {
         NavigationStack(path: $path) {
             ScrollView {
                 VStack(spacing: 12) {
+                    if slotOptions.count > 1 {
+                        slotChip
+                    }
                     searchRow
                     secondaryActionsRow
 
@@ -81,6 +90,56 @@ struct AddFoodView: View {
                 await search()
             }
         }
+    }
+
+    /// "Adding to Lunch" — states the guess plainly and makes correcting it one tap, rather than
+    /// silently logging into a slot the user never picked.
+    private var slotChip: some View {
+        Menu {
+            ForEach(slotOptions) { option in
+                Button {
+                    mealSlot = option
+                } label: {
+                    if option.id == mealSlot.id {
+                        Label(menuLabel(for: option), systemImage: "checkmark")
+                    } else {
+                        Text(menuLabel(for: option))
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Text("ADDING TO")
+                    .font(.manrope(10, weight: .bold))
+                    .tracking(1.4)
+                    .foregroundStyle(Color.dashboardInkSecondary)
+                Text(mealSlot.name)
+                    .font(.manrope(13, weight: .semibold))
+                    .foregroundStyle(Color.dashboardInk)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(Color.dashboardInkSecondary)
+            }
+            .padding(.horizontal, 14)
+            .frame(height: 36)
+            .background(Color.dashboardCard, in: Capsule())
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityLabel("Meal slot")
+        .accessibilityValue(mealSlot.name)
+    }
+
+    /// The default setup has three slots all called "Snack", which are indistinguishable in a
+    /// menu even though their order implies when they are. Repeated names get the meal they
+    /// follow appended; unique names are left exactly as configured.
+    private func menuLabel(for slot: MealSlotConfig) -> String {
+        let isRepeated = slotOptions.filter { $0.name == slot.name }.count > 1
+        guard isRepeated, let index = slotOptions.firstIndex(where: { $0.id == slot.id }) else {
+            return slot.name
+        }
+        let precedingMeal = slotOptions[..<index].last(where: { $0.slotType == .meal })
+        guard let precedingMeal else { return slot.name }
+        return "\(slot.name) · after \(precedingMeal.name)"
     }
 
     private var searchRow: some View {

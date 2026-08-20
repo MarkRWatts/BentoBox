@@ -7,11 +7,16 @@ import UIKit
 /// counterpart (same hue, inverted lightness) so the redesigned Dashboard still works in dark
 /// mode instead of just going literal-only in light mode.
 extension Color {
-    /// Page canvas behind the cards. Mockup: #eef7f1. Dark uses Apple's standard system black
-    /// rather than a tinted dark green so the app matches the platform's normal dark mode look.
-    static let dashboardCanvas = adaptive(light: 0xEEF7F1, dark: 0x000000)
+    /// Page canvas behind the cards. The mockup specifies a tinted mint (#eef7f1), but the
+    /// `Form`-based screens (Settings and every editor pushed from it) can't be tinted without
+    /// fighting UIKit, so the mint only ever applied to half the app and read as two different
+    /// designs bolted together. Taken straight from `systemGroupedBackground` instead — the exact
+    /// color those screens already use — so the whole app shares one canvas in both appearances
+    /// (#f2f2f7 light, black dark, which is what this token already resolved to in dark mode).
+    static let dashboardCanvas = Color(uiColor: .systemGroupedBackground)
     /// Card surfaces. Mockup: #ffffff. Dark uses Apple's standard `secondarySystemBackground`
-    /// gray (#1c1c1e) instead of a tinted dark green, to match `dashboardCanvas`.
+    /// gray (#1c1c1e) instead of a tinted dark green, to match `dashboardCanvas` — the same
+    /// white-card-on-grouped-grey pairing the `Form` screens get for free.
     static let dashboardCard = adaptive(light: 0xFFFFFF, dark: 0x1C1C1E)
 
     /// Headline ink (big numbers, names). Mockup: #10261d.
@@ -31,6 +36,13 @@ extension Color {
     /// Mint used for the carbs macro fill. Mockup: #2ed194.
     static let dashboardCarbFill = adaptive(light: 0x2ED194, dark: 0x4BE0A8)
 
+    /// Water's own accent — the one place the Dashboard deliberately steps outside the mockup's
+    /// green palette, since a green drop reads as anything but water. Picked teal-leaning rather
+    /// than a pure blue so it still sits next to `dashboardAccent` without clashing.
+    static let dashboardWater = adaptive(light: 0x0A93C9, dark: 0x45BDEA)
+    /// The pale end of the water ramp — see `dashboardWaterFill(_:of:)`.
+    static let dashboardWaterPale = adaptive(light: 0xA9D6EC, dark: 0x2E5D75)
+
     /// Empty progress-bar track. Mockup: #def0e5.
     static let dashboardBarTrack = adaptive(light: 0xDEF0E5, dark: 0x24352C)
     /// Default (not over-target) 7-day bar fill. Mockup: #a9dcc2.
@@ -43,6 +55,30 @@ extension Color {
     /// a fixed pale mint rather than an adaptive token, since it's sized to that one dark-green
     /// card background rather than to the system light/dark theme. Mockup: #c9e7d6.
     static let dashboardOnAccent = Color(red: 0.788, green: 0.906, blue: 0.839)
+
+    /// Fill for one glass in `WaterCardView`'s row: a ramp from `dashboardWaterPale` at the first
+    /// glass to the full `dashboardWater` blue at the last, so a filling row reads as deepening
+    /// rather than as N identical drops. Interpolated inside a `UIColor` trait closure
+    /// (rather than between two already-resolved colors) so both ends of the ramp stay correct
+    /// when the theme flips.
+    static func dashboardWaterFill(_ index: Int, of count: Int) -> Color {
+        let fraction = count > 1 ? min(max(Double(index) / Double(count - 1), 0), 1) : 1
+        return Color(uiColor: UIColor { traits in
+            let start = UIColor(dashboardWaterPale).resolvedColor(with: traits)
+            let end = UIColor(dashboardWater).resolvedColor(with: traits)
+            var startComponents = (red: CGFloat(0), green: CGFloat(0), blue: CGFloat(0), alpha: CGFloat(0))
+            var endComponents = (red: CGFloat(0), green: CGFloat(0), blue: CGFloat(0), alpha: CGFloat(0))
+            start.getRed(&startComponents.red, green: &startComponents.green, blue: &startComponents.blue, alpha: &startComponents.alpha)
+            end.getRed(&endComponents.red, green: &endComponents.green, blue: &endComponents.blue, alpha: &endComponents.alpha)
+            let mix = { (from: CGFloat, to: CGFloat) in from + (to - from) * CGFloat(fraction) }
+            return UIColor(
+                red: mix(startComponents.red, endComponents.red),
+                green: mix(startComponents.green, endComponents.green),
+                blue: mix(startComponents.blue, endComponents.blue),
+                alpha: mix(startComponents.alpha, endComponents.alpha)
+            )
+        })
+    }
 
     private static func adaptive(light: UInt32, dark: UInt32) -> Color {
         adaptive(light: (light, 1), dark: (dark, 1))

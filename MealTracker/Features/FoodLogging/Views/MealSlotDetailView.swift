@@ -1,23 +1,12 @@
 import SwiftUI
 import SwiftData
 
-private enum FoodLoggingSheet: Identifiable {
-    case addFood
-    case barcodeScan
-    case labelScan
-    case manualEntry
-    case copyFromPreviousDay
-    case recipes
-
-    var id: Self { self }
-}
-
 struct MealSlotDetailView: View {
     let mealSlot: MealSlotConfig
     let date: Date
     @Query private var entries: [LoggedEntry]
     @Environment(\.modelContext) private var modelContext
-    @State private var activeSheet: FoodLoggingSheet?
+    @State private var isAddingFood = false
     @State private var editingEntry: LoggedEntry?
 
     init(mealSlot: MealSlotConfig, date: Date) {
@@ -90,30 +79,8 @@ struct MealSlotDetailView: View {
         .overlay(alignment: .bottomTrailing) {
             addFoodButton
         }
-        .sheet(item: $activeSheet) { sheet in
-            switch sheet {
-            case .addFood:
-                AddFoodView(
-                    mealSlot: mealSlot,
-                    date: date.atCurrentTimeOfDay,
-                    onSelectBarcodeScan: { activeSheet = .barcodeScan },
-                    onSelectLabelScan: { activeSheet = .labelScan },
-                    onSelectManualEntry: { activeSheet = .manualEntry },
-                    onSelectCopyFromPreviousDay: { activeSheet = .copyFromPreviousDay },
-                    onSelectRecipes: { activeSheet = .recipes },
-                    onLogged: { activeSheet = nil }
-                )
-            case .barcodeScan:
-                BarcodeScanView(mealSlot: mealSlot, date: date.atCurrentTimeOfDay)
-            case .labelScan:
-                LabelScanView(mealSlot: mealSlot, date: date.atCurrentTimeOfDay)
-            case .manualEntry:
-                ManualFoodEntryView(mealSlot: mealSlot, date: date.atCurrentTimeOfDay)
-            case .copyFromPreviousDay:
-                CopyFromPreviousDayView(mealSlot: mealSlot, date: date, onCompleted: { activeSheet = nil })
-            case .recipes:
-                RecipeListView(mealSlot: mealSlot, date: date.atCurrentTimeOfDay, onLogged: { activeSheet = nil })
-            }
+        .sheet(isPresented: $isAddingFood) {
+            FoodLoggingFlowView(initialSlot: mealSlot, date: date)
         }
         .sheet(item: $editingEntry) { entry in
             EditLoggedEntryView(entry: entry)
@@ -128,19 +95,6 @@ struct MealSlotDetailView: View {
     }
 
     private var addFoodButton: some View {
-        Button {
-            activeSheet = .addFood
-        } label: {
-            Image(systemName: "plus")
-                .font(.title2.weight(.semibold))
-                .foregroundStyle(.white)
-                .frame(width: 56, height: 56)
-        }
-        // `.dashboardAccentDeep` rather than `.accentColor` — same dark-mode contrast issue
-        // noted elsewhere: accentColor brightens in dark mode, which combined with the glass
-        // material's translucency left the white "+" too low-contrast to read clearly.
-        .glassEffect(.regular.tint(.dashboardAccentDeep).interactive(), in: Circle())
-        .padding(20)
-        .accessibilityLabel("Add Food")
+        FloatingAddButton(accessibilityLabel: "Add Food") { isAddingFood = true }
     }
 }

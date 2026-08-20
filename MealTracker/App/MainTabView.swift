@@ -1,7 +1,7 @@
 import SwiftUI
 
 private enum MainTab: Int, Hashable, CaseIterable {
-    case today, trends
+    case today, log, trends
 }
 
 struct MainTabView: View {
@@ -12,6 +12,9 @@ struct MainTabView: View {
     /// with a custom `Binding` since `TabView` only calls a plain `@State`'s setter on an actual
     /// selection change, never on a re-tap of the tab you're already on.
     @State private var goToTodayTrigger = UUID()
+    /// Shared so the Log tab logs into whichever day Today is showing — the two tabs are one
+    /// day's worth of context split across two pages, not two independent screens.
+    @State private var dayContext = DayContext()
 
     private var selection: Binding<MainTab> {
         Binding(
@@ -45,12 +48,19 @@ struct MainTabView: View {
 
     var body: some View {
         TabView(selection: selection) {
-            DashboardView(profile: profile, goToTodayTrigger: goToTodayTrigger)
+            DashboardView(profile: profile, dayContext: dayContext, goToTodayTrigger: goToTodayTrigger)
                 .simultaneousGesture(swipeBetweenTabsGesture)
                 .tabItem {
                     Label("Today", systemImage: "chart.pie.fill")
                 }
                 .tag(MainTab.today)
+
+            LogView(profile: profile, dayContext: dayContext)
+                .simultaneousGesture(swipeBetweenTabsGesture)
+                .tabItem {
+                    Label("Log", systemImage: "fork.knife")
+                }
+                .tag(MainTab.log)
 
             ChartsView(profile: profile)
                 .simultaneousGesture(swipeBetweenTabsGesture)

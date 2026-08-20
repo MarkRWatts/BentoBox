@@ -20,6 +20,14 @@ struct WeekStripView: View {
     /// only the visible columns are ever actually rendered.
     private let dayOffsetRange = -730...730
     @State private var scrolledDayOffset: Int?
+    /// The offset the strip opened on, kept so the deferred re-centering below can tell "still
+    /// where we started" from "the user has already scrolled".
+    /// Measured off the divider above the strip — a plain full-width `Rectangle` — rather than
+    /// read from a `GeometryReader` wrapped around the scrolling row itself. That reader only
+    /// ever reported the strip's own tiny ideal width once the Dashboard stopped containing a
+    /// card wide enough to give the scroll content a definite width, which sized the day columns
+    /// at 20pt and left the wrong day sitting under the caret.
+    @State private var stripWidth: CGFloat = 0
 
     init(
         selectedDate: Binding<Date>,
@@ -101,10 +109,11 @@ struct WeekStripView: View {
             Rectangle()
                 .fill(Color.dashboardDivider)
                 .frame(height: 1)
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { stripWidth = $0 }
 
             ZStack(alignment: .top) {
-                GeometryReader { geometry in
-                    let columnWidth = geometry.size.width / 7
+                if stripWidth > 0 {
+                    let columnWidth = stripWidth / 7
                     ScrollViewReader { proxy in
                         ScrollView(.horizontal, showsIndicators: false) {
                             LazyHStack(spacing: 0) {
@@ -119,20 +128,14 @@ struct WeekStripView: View {
                         .scrollTargetBehavior(.viewAligned)
                         .scrollPosition(id: $scrolledDayOffset, anchor: .center)
                         .safeAreaPadding(.horizontal, columnWidth * 3)
-                        .onAppear {
-                            // `.scrollPosition`'s initial positioning is seeded via `init` (see
-                            // above), which is reliable in the Simulator but was still observed
-                            // landing un-centered on a physical device — a `LazyHStack` this long
-                            // (1,461 columns) may not have estimated the target column's offset
-                            // in time for that declarative initial value to apply. Force it
-                            // explicitly once real geometry exists, deferred a tick past the
-                            // current layout pass so `proxy` has something to scroll to.
-                            DispatchQueue.main.async {
-                                if let scrolledDayOffset {
-                                    proxy.scrollTo(scrolledDayOffset, anchor: .center)
-                                }
-                            }
-                        }
+                        // `.scrollPosition`'s initial positioning is seeded via `init` (see
+                        // above), which is reliable in the Simulator but was still observed
+                        // landing un-centered on a physical device — a `LazyHStack` this long
+                        // (1,461 columns) may not have estimated the target column's offset in
+                        // time for that declarative initial value to apply.
+                        // Forced explicitly here, once the strip has a measured width and the
+                        // scroll view therefore exists at its real size.
+                        .onAppear { recenter(using: proxy) }
                     }
                 }
 
@@ -141,6 +144,12 @@ struct WeekStripView: View {
                     .foregroundStyle(.secondary)
                     .allowsHitTesting(false)
             }
+            // Pinned to the scroll container's width rather than inferred: the columns are sized
+            // as `width / 7` from the `GeometryReader` below, and a `GeometryReader` has no ideal
+            // width of its own, so it only ever measured correctly while some *sibling* card in
+            // the Dashboard's stack happened to define the content width. Moving those cards to
+            // the Log tab collapsed this to ~140pt — 20pt columns, a mis-centered strip, and the
+            // wrong day sitting under the caret.
             .frame(height: 92)
         }
         .onChange(of: scrolledDayOffset) { _, newOffset in
@@ -152,6 +161,15 @@ struct WeekStripView: View {
                 withAnimation {
                     scrolledDayOffset = selectedDayOffset
                 }
+            }
+        }
+    }
+
+    /// Deferred a tick past the current layout pass so `proxy` has something to scroll to.
+    private func recenter(using proxy: ScrollViewProxy) {
+        DispatchQueue.main.async {
+            if let scrolledDayOffset {
+                proxy.scrollTo(scrolledDayOffset, anchor: .center)
             }
         }
     }

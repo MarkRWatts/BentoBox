@@ -3,7 +3,9 @@ import SwiftData
 
 /// "WATER" card — a row of glass glyphs over the same small-caps-header/rounded-card shape
 /// `MicronutrientBreakdownView` uses, so hydration reads as one more nutrition row on the
-/// Dashboard rather than a differently-styled bolt-on. Logging is one tap of the trailing button
+/// Dashboard rather than a differently-styled bolt-on. Its accent is `dashboardWater` blue
+/// rather than the Dashboard's green: water is the one metric here that already has a colour
+/// people expect. Logging is one tap of the trailing button
 /// (one glass, sized in Settings) and the minus button removes the most recent glass, which is
 /// what "I tapped twice by accident" actually needs — there's no per-drink editing screen here.
 struct WaterCardView: View {
@@ -40,7 +42,7 @@ struct WaterCardView: View {
                     .tracking(1.4)
                     .foregroundStyle(Color.dashboardInkSecondary)
                 Spacer()
-                (Text("\(Int(unit.value(fromML: consumedML).rounded()))").foregroundStyle(Color.dashboardAccent)
+                (Text("\(Int(unit.value(fromML: consumedML).rounded()))").foregroundStyle(Color.dashboardWater)
                     + Text(" / \(Int(unit.value(fromML: profile.dailyWaterTargetML).rounded())) \(unit.displayName)")
                         .foregroundStyle(Color.dashboardInkSecondary))
                     .font(.manrope(12, weight: .semibold))
@@ -53,7 +55,7 @@ struct WaterCardView: View {
                 GeometryReader { geometry in
                     ZStack(alignment: .leading) {
                         Capsule().fill(Color.dashboardBarTrack)
-                        Capsule().fill(Color.dashboardAccent).frame(width: geometry.size.width * progress)
+                        Capsule().fill(Color.dashboardWater).frame(width: geometry.size.width * progress)
                     }
                 }
                 .frame(height: 4)
@@ -87,7 +89,7 @@ struct WaterCardView: View {
                         .foregroundStyle(Color.dashboardCard)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 9)
-                        .background(Color.dashboardAccent, in: Capsule())
+                        .background(Color.dashboardWater, in: Capsule())
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Log a \(unit.displayString(fromML: servingML)) glass")
@@ -103,7 +105,7 @@ struct WaterCardView: View {
             ForEach(0..<glassCount, id: \.self) { index in
                 Image(systemName: index < glassesFilled ? "drop.fill" : "drop")
                     .font(.system(size: 17, weight: .regular))
-                    .foregroundStyle(index < glassesFilled ? Color.dashboardAccent : Color.dashboardInkFaint)
+                    .foregroundStyle(index < glassesFilled ? Color.dashboardWaterFill(index, of: glassCount) : Color.dashboardInkFaint)
                     .frame(maxWidth: .infinity)
             }
         }
