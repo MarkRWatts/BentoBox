@@ -53,6 +53,11 @@ extension Color {
     /// Today's own over-target bar stays the fuller `Color.brandProtein` used for "over" state
     /// everywhere else (headline caption, macro rings, Trends weekly chart).
     static let dashboardOverFill = adaptive(light: 0xF0C7AA, dark: 0x6B4B39)
+    /// Neutral grey for a day with no entries at all in the week strip — deliberately outside the
+    /// green/salmon palette (unlike `dashboardBarTrack`) so an empty day reads as "nothing
+    /// logged" rather than a faint, ambiguous "under target". Apple's own system grey rather than
+    /// a hand-picked hex, so it stays correctly adaptive without guessing a dark counterpart.
+    static let dashboardEmptyTrack = Color(uiColor: .systemGray5)
 
     /// Hairline row/section dividers. Mockup: rgba(16,38,29,.07).
     static let dashboardDivider = adaptive(light: (0x10261D, 0.07), dark: (0xFFFFFF, 0.08))

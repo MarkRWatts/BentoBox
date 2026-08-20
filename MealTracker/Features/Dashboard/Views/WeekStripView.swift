@@ -13,6 +13,9 @@ struct WeekStripView: View {
     @Binding var selectedDate: Date
     /// Start-of-day keys for the days that have entries — see `DayProgressCalculator`.
     let daysWithEntries: Set<Date>
+    /// Start-of-day keys for the (necessarily also `daysWithEntries`) days whose calories ended
+    /// up over target — see `DashboardView.daysOverTarget(from:)`.
+    let daysOverTarget: Set<Date>
     var onTapCalendar: () -> Void
     var onTapAvatar: () -> Void
 
@@ -35,11 +38,13 @@ struct WeekStripView: View {
     init(
         selectedDate: Binding<Date>,
         daysWithEntries: Set<Date>,
+        daysOverTarget: Set<Date>,
         onTapCalendar: @escaping () -> Void,
         onTapAvatar: @escaping () -> Void
     ) {
         self._selectedDate = selectedDate
         self.daysWithEntries = daysWithEntries
+        self.daysOverTarget = daysOverTarget
         self.onTapCalendar = onTapCalendar
         self.onTapAvatar = onTapAvatar
         // Seeded directly as the initial `@State` value rather than assigned in `.onAppear` —
@@ -186,10 +191,17 @@ struct WeekStripView: View {
         }
     }
 
+    private func dotColor(isSelected: Bool, hasEntries: Bool, isOver: Bool) -> Color {
+        guard hasEntries else { return .dashboardEmptyTrack }
+        if isOver { return isSelected ? .brandProtein : .dashboardOverFill }
+        return isSelected ? .dashboardAccent : .dashboardBarFill
+    }
+
     @ViewBuilder
     private func dayCell(_ day: Date) -> some View {
         let isSelected = calendar.isDate(day, inSameDayAs: selectedDate)
         let hasEntries = daysWithEntries.contains(day.startOfDay)
+        let isOver = daysOverTarget.contains(day.startOfDay)
         Button {
             selectedDate = day
         } label: {
@@ -206,7 +218,7 @@ struct WeekStripView: View {
                     .padding(.top, 12)
 
                 Circle()
-                    .fill(hasEntries ? (isSelected ? Color.dashboardAccent : Color.dashboardBarFill) : Color.dashboardBarTrack)
+                    .fill(dotColor(isSelected: isSelected, hasEntries: hasEntries, isOver: isOver))
                     .frame(width: 44, height: 44)
             }
             .frame(maxWidth: .infinity)
