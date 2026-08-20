@@ -8,7 +8,6 @@ struct MealSlotDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var isAddingFood = false
     @State private var editingEntry: LoggedEntry?
-    @State private var copyingEntry: LoggedEntry?
 
     init(mealSlot: MealSlotConfig, date: Date) {
         self.mealSlot = mealSlot
@@ -43,39 +42,8 @@ struct MealSlotDetailView: View {
                         .foregroundStyle(Color.dashboardInkSecondary)
                 }
                 ForEach(entries) { entry in
-                    Button {
-                        editingEntry = entry
-                    } label: {
-                        HStack(spacing: 12) {
-                            FoodThumbnailView(
-                                urlString: entry.foodItem?.imageURLString,
-                                cornerRadius: 12,
-                                placeholderColor: .dashboardBarTrack,
-                                size: 40
-                            )
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(entry.foodItem?.name ?? "Unknown Food")
-                                    .font(.manrope(14, weight: .semibold))
-                                    .foregroundStyle(Color.dashboardInk)
-                                Text("\(entry.quantity, specifier: "%.2f") × \(entry.foodItem?.servingSizeDescription ?? "") — \(Int(entry.calories)) cal")
-                                    .font(.manrope(11.5, weight: .medium))
-                                    .foregroundStyle(Color.dashboardInkSecondary)
-                            }
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    // Full swipe deliberately off: the gesture reveals the button and the copy
-                    // needs a tap, rather than a long swipe silently opening the sheet.
-                    .swipeActions(edge: .leading, allowsFullSwipe: false) {
-                        Button {
-                            copyingEntry = entry
-                        } label: {
-                            Label("Copy to", systemImage: "doc.on.doc")
-                        }
-                        .tint(Color.dashboardAccent)
-                    }
+                    entryRow(entry)
                 }
-                .onDelete(perform: deleteEntries)
             } header: {
                 Text("\(Int(totalCalories)) CALORIES LOGGED")
                     .font(.manrope(10, weight: .bold))
@@ -83,13 +51,6 @@ struct MealSlotDetailView: View {
                     .foregroundStyle(Color.dashboardAccent)
             }
         }
-        // Deliberately no `.listRowBackground` / hidden scroll background here, unlike the rest
-        // of the app's screens: a custom row background is a SwiftUI view hosted inside each
-        // cell, and the swipe reveal has to re-composite it every frame, which showed up as the
-        // action icons visibly expanding into place instead of sliding out. The tokens those
-        // modifiers set are the system's own colours anyway — `dashboardCanvas` *is*
-        // `systemGroupedBackground` and `dashboardCard` matches `secondarySystemGroupedBackground`
-        // — so letting `List` draw its native cells looks identical and animates natively.
         .navigationTitle(navigationTitleText)
         .navigationBarTitleDisplayMode(.inline)
         .overlay(alignment: .bottomTrailing) {
@@ -101,15 +62,46 @@ struct MealSlotDetailView: View {
         .sheet(item: $editingEntry) { entry in
             EditLoggedEntryView(entry: entry)
         }
-        .sheet(item: $copyingEntry) { entry in
-            CopyEntryToView(entry: entry) { copyingEntry = nil }
+    }
+
+    private func entryRow(_ entry: LoggedEntry) -> some View {
+        Button {
+            editingEntry = entry
+        } label: {
+            HStack(spacing: 12) {
+                FoodThumbnailView(
+                    urlString: entry.foodItem?.imageURLString,
+                    cornerRadius: 12,
+                    placeholderColor: .dashboardBarTrack,
+                    size: 40
+                )
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(entry.foodItem?.name ?? "Unknown Food")
+                        .font(.manrope(14, weight: .semibold))
+                        .foregroundStyle(Color.dashboardInk)
+                    Text("\(entry.quantity, specifier: "%.2f") × \(entry.foodItem?.servingSizeDescription ?? "") — \(Int(entry.calories)) cal")
+                        .font(.manrope(11.5, weight: .medium))
+                        .foregroundStyle(Color.dashboardInkSecondary)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        // Spelled out rather than `.onDelete` so the button can carry a tint. The destructive
+        // role doesn't win over an inherited tint: `MainTabView` tints the whole app with
+        // `dashboardAccent`, which reaches down here and paints Delete green in both
+        // appearances unless red is pinned explicitly.
+        .swipeActions(edge: .trailing) {
+            Button(role: .destructive) {
+                delete(entry)
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+            .tint(.red)
         }
     }
 
-    private func deleteEntries(at offsets: IndexSet) {
-        for index in offsets {
-            modelContext.delete(entries[index])
-        }
+    private func delete(_ entry: LoggedEntry) {
+        modelContext.delete(entry)
         try? modelContext.save()
     }
 
