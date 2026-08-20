@@ -26,6 +26,17 @@ final class MealSlotConfig {
 }
 
 extension MealSlotConfig {
+    /// "Snack · after Lunch" where several slots share a name — the default setup has three
+    /// slots all called "Snack", which are indistinguishable in a menu or picker even though
+    /// their order implies when they are. Unique names are returned exactly as configured.
+    func disambiguatedName(among slots: [MealSlotConfig]) -> String {
+        guard slots.filter({ $0.name == name }).count > 1,
+              let index = slots.firstIndex(where: { $0.id == id }),
+              let precedingMeal = slots[..<index].last(where: { $0.slotType == .meal })
+        else { return name }
+        return "\(name) · after \(precedingMeal.name)"
+    }
+
     /// Default meal structure: Breakfast/Lunch/Dinner, each followed by a Snack slot.
     static func defaultSlots(for profile: UserProfile) -> [MealSlotConfig] {
         let definitions: [(name: String, type: MealSlotType)] = [

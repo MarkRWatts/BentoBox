@@ -8,6 +8,7 @@ struct MealSlotDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var isAddingFood = false
     @State private var editingEntry: LoggedEntry?
+    @State private var copyingEntry: LoggedEntry?
 
     init(mealSlot: MealSlotConfig, date: Date) {
         self.mealSlot = mealSlot
@@ -63,6 +64,16 @@ struct MealSlotDetailView: View {
                         }
                     }
                     .listRowBackground(Color.dashboardCard)
+                    // Full swipe deliberately off: the gesture reveals the button and the copy
+                    // needs a tap, rather than a long swipe silently opening the sheet.
+                    .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                        Button {
+                            copyingEntry = entry
+                        } label: {
+                            Label("Copy to", systemImage: "doc.on.doc")
+                        }
+                        .tint(Color.dashboardAccent)
+                    }
                 }
                 .onDelete(perform: deleteEntries)
             } header: {
@@ -84,6 +95,9 @@ struct MealSlotDetailView: View {
         }
         .sheet(item: $editingEntry) { entry in
             EditLoggedEntryView(entry: entry)
+        }
+        .sheet(item: $copyingEntry) { entry in
+            CopyEntryToView(entry: entry) { copyingEntry = nil }
         }
     }
 

@@ -101,9 +101,9 @@ struct AddFoodView: View {
                     mealSlot = option
                 } label: {
                     if option.id == mealSlot.id {
-                        Label(menuLabel(for: option), systemImage: "checkmark")
+                        Label(option.disambiguatedName(among: slotOptions), systemImage: "checkmark")
                     } else {
-                        Text(menuLabel(for: option))
+                        Text(option.disambiguatedName(among: slotOptions))
                     }
                 }
             }
@@ -127,19 +127,6 @@ struct AddFoodView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityLabel("Meal slot")
         .accessibilityValue(mealSlot.name)
-    }
-
-    /// The default setup has three slots all called "Snack", which are indistinguishable in a
-    /// menu even though their order implies when they are. Repeated names get the meal they
-    /// follow appended; unique names are left exactly as configured.
-    private func menuLabel(for slot: MealSlotConfig) -> String {
-        let isRepeated = slotOptions.filter { $0.name == slot.name }.count > 1
-        guard isRepeated, let index = slotOptions.firstIndex(where: { $0.id == slot.id }) else {
-            return slot.name
-        }
-        let precedingMeal = slotOptions[..<index].last(where: { $0.slotType == .meal })
-        guard let precedingMeal else { return slot.name }
-        return "\(slot.name) · after \(precedingMeal.name)"
     }
 
     private var searchRow: some View {

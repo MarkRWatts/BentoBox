@@ -110,6 +110,7 @@ struct LogView: View {
                 .padding(.bottom, 88)
             }
             .background(Color.dashboardCanvas)
+            .swipeBetweenTabs()
             .overlay(alignment: .bottomTrailing) {
                 if quickAddSlot != nil {
                     FloatingAddButton(accessibilityLabel: "Log Food") { isAddingFood = true }

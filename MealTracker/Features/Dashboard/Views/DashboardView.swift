@@ -121,6 +121,7 @@ struct DashboardView: View {
                 }
             }
             .background(Color.dashboardCanvas)
+            .swipeBetweenTabs()
             .overlay(alignment: .bottomTrailing) {
                 if quickAddSlot != nil {
                     FloatingAddButton(accessibilityLabel: "Log Food") { isQuickAddingFood = true }

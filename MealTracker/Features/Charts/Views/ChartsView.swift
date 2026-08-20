@@ -106,6 +106,7 @@ struct ChartsView: View {
             }
             .scrollContentBackground(.hidden)
             .background(Color.dashboardCanvas)
+            .swipeBetweenTabs()
             .contentMargins(.top, 0, for: .scrollContent)
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
