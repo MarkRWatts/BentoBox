@@ -90,8 +90,9 @@ private struct DailyIntakeBarsView: View {
     }
 
     private func barColor(for point: DayProgress) -> Color {
+        if point.hasEntries && point.caloriesConsumed > point.caloriesTarget { return .brandProtein }
         if Calendar.current.isDate(point.date, inSameDayAs: selectedDate) { return .dashboardAccent }
-        return point.caloriesConsumed > point.caloriesTarget ? .dashboardLime : .dashboardBarFill
+        return .dashboardBarFill
     }
 
     var body: some View {
